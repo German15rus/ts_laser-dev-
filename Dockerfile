@@ -13,8 +13,6 @@ WORKDIR /app
 RUN mkdir -p /app/Data
 
 COPY --from=build /app .
-COPY src/TsLaser.Crm.Api/Templates/ ./Templates/
-COPY src/TsLaser.Crm.Api/wwwroot/ ./wwwroot/
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
