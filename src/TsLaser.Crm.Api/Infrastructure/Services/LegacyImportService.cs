@@ -34,13 +34,14 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
+        var clientIds = await dbContext.Clients.AsNoTracking().Select(x => x.Id).ToHashSetAsync(cancellationToken);
+
         if (await TableExistsAsync(conn, "tattoos", cancellationToken))
         {
-            await ImportTattoosAsync(conn, cancellationToken);
+            await ImportTattoosAsync(conn, clientIds, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        var clientIds = await dbContext.Clients.AsNoTracking().Select(x => x.Id).ToHashSetAsync(cancellationToken);
         var tattooIds = await dbContext.Tattoos.AsNoTracking().Select(x => x.Id).ToHashSetAsync(cancellationToken);
 
         if (await TableExistsAsync(conn, "laser_sessions", cancellationToken))
@@ -117,7 +118,10 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
         }
     }
 
-    private async Task ImportTattoosAsync(SqliteConnection conn, CancellationToken cancellationToken)
+    private async Task ImportTattoosAsync(
+        SqliteConnection conn,
+        HashSet<int> clientIds,
+        CancellationToken cancellationToken)
     {
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT * FROM tattoos";
@@ -130,6 +134,8 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
             {
                 continue;
             }
+
+            EnsureArchiveClient(clientId, clientIds);
 
             dbContext.Tattoos.Add(new Tattoo
             {
@@ -162,6 +168,7 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
         while (await reader.ReadAsync(cancellationToken))
         {
             var clientId = GetInt(reader, "client_id") ?? 0;
+            EnsureArchiveClient(clientId, clientIds);
             if (!clientIds.Contains(clientId))
             {
                 continue;
@@ -208,6 +215,7 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
         while (await reader.ReadAsync(cancellationToken))
         {
             var clientId = GetInt(reader, "client_id") ?? 0;
+            EnsureArchiveClient(clientId, clientIds);
             if (!clientIds.Contains(clientId))
             {
                 continue;
@@ -333,5 +341,25 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
         }
 
         return null;
+    }
+
+    private void EnsureArchiveClient(int clientId, HashSet<int> clientIds)
+    {
+        if (clientId <= 0 || clientIds.Contains(clientId))
+        {
+            return;
+        }
+
+        dbContext.Clients.Add(new Client
+        {
+            Id = clientId,
+            Name = $"ARCHIVE_CLIENT_{clientId}",
+            Status = "lost",
+            ReferralCustom = "Imported orphan record",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+
+        clientIds.Add(clientId);
     }
 }

@@ -136,20 +136,11 @@ for (var i = 0; i < args.Length; i++)
     {
         if (i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
         {
-            importPath = args[i + 1];
+            importPath = ResolveLegacyPath(args[i + 1]);
         }
         else
         {
-            var cwd = Directory.GetCurrentDirectory();
-            var candidates = new[]
-            {
-                Path.Combine(cwd, "legacy_python_backend", "tslaser.db"),
-                Path.GetFullPath(Path.Combine(cwd, "..", "legacy_python_backend", "tslaser.db")),
-                Path.GetFullPath(Path.Combine(cwd, "..", "..", "legacy_python_backend", "tslaser.db")),
-                Path.GetFullPath(Path.Combine(cwd, "..", "..", "..", "legacy_python_backend", "tslaser.db")),
-            };
-
-            importPath = candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+            importPath = ResolveLegacyPath("legacy_python_backend/tslaser.db");
         }
 
         break;
@@ -171,6 +162,8 @@ if (!string.IsNullOrWhiteSpace(importPath))
             importPath);
     }
 
+    Log.Information("Resolved legacy import path: {ImportPath}", importPath);
+
     using var importScope = app.Services.CreateScope();
     var importer = importScope.ServiceProvider.GetRequiredService<LegacyImportService>();
     await importer.ImportAsync(importPath);
@@ -178,3 +171,29 @@ if (!string.IsNullOrWhiteSpace(importPath))
 }
 
 await app.RunAsync();
+
+static string ResolveLegacyPath(string rawPath)
+{
+    if (string.IsNullOrWhiteSpace(rawPath))
+    {
+        return rawPath;
+    }
+
+    if (Path.IsPathRooted(rawPath))
+    {
+        return Path.GetFullPath(rawPath);
+    }
+
+    var cwd = Directory.GetCurrentDirectory();
+
+    var candidates = new[]
+    {
+        Path.GetFullPath(Path.Combine(cwd, rawPath)),
+        Path.GetFullPath(Path.Combine(cwd, "..", rawPath)),
+        Path.GetFullPath(Path.Combine(cwd, "..", "..", rawPath)),
+        Path.GetFullPath(Path.Combine(cwd, "..", "..", "..", rawPath)),
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, rawPath)),
+    };
+
+    return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+}
