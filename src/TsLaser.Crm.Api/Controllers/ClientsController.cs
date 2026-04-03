@@ -1,0 +1,169 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TsLaser.Crm.Api.Common;
+using TsLaser.Crm.Api.Contracts;
+using TsLaser.Crm.Api.Domain.Entities;
+using TsLaser.Crm.Api.Infrastructure.Persistence;
+
+namespace TsLaser.Crm.Api.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/clients")]
+public sealed class ClientsController(AppDbContext dbContext) : ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<List<ClientListResponse>>> GetClients(
+        [FromQuery] string? search,
+        [FromQuery(Name = "status_filter")] string? statusFilter,
+        [FromQuery(Name = "partner_filter")] int? partnerFilter,
+        [FromQuery(Name = "sort_by")] string sortBy = "name",
+        [FromQuery(Name = "sort_order")] string sortOrder = "asc",
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Client> query = dbContext.Clients.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+        {
+            query = query.Where(x => x.Status == statusFilter);
+        }
+
+        if (partnerFilter.HasValue)
+        {
+            query = query.Where(x => x.ReferralPartnerId == partnerFilter.Value);
+        }
+
+        query = (sortBy.ToLowerInvariant(), sortOrder.ToLowerInvariant()) switch
+        {
+            ("status", "desc") => query.OrderByDescending(x => x.Status),
+            ("status", _) => query.OrderBy(x => x.Status),
+            ("created_at", "desc") => query.OrderByDescending(x => x.CreatedAt),
+            ("created_at", _) => query.OrderBy(x => x.CreatedAt),
+            ("name", "desc") => query.OrderByDescending(x => x.Name),
+            _ => query.OrderBy(x => x.Name),
+        };
+
+        var clients = await query.ToListAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.ToLowerInvariant();
+            var searchDigits = new string(search.Where(char.IsDigit).ToArray());
+
+            clients = clients
+                .Where(client =>
+                    (!string.IsNullOrWhiteSpace(client.Name) && client.Name.ToLowerInvariant().Contains(searchLower)) ||
+                    (!string.IsNullOrWhiteSpace(searchDigits) && !string.IsNullOrWhiteSpace(client.Phone) && client.Phone.Contains(searchDigits)))
+                .ToList();
+        }
+
+        return Ok(clients.Select(x => x.ToListResponse()).ToList());
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ClientResponse>> CreateClient([FromBody] ClientCreateRequest request, CancellationToken cancellationToken)
+    {
+        var client = new Client
+        {
+            Name = request.Name.Trim(),
+            Phone = request.Phone,
+            BirthDate = request.BirthDate,
+            Age = request.Age,
+            Gender = request.Gender,
+            Address = request.Address,
+            ReferralPartnerId = request.ReferralPartnerId,
+            ReferralCustom = request.ReferralCustom,
+            Status = StatusHelper.Normalize(request.Status),
+            StoppedReason = request.StoppedReason,
+        };
+
+        dbContext.Clients.Add(client);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        string? partnerName = null;
+        if (client.ReferralPartnerId.HasValue)
+        {
+            partnerName = await dbContext.Partners
+                .Where(x => x.Id == client.ReferralPartnerId.Value)
+                .Select(x => x.Name)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return CreatedAtAction(nameof(GetClient), new { clientId = client.Id }, client.ToResponse(partnerName));
+    }
+
+    [HttpGet("{clientId:int}")]
+    public async Task<ActionResult<ClientResponse>> GetClient(int clientId, CancellationToken cancellationToken)
+    {
+        var client = await dbContext.Clients.AsNoTracking().FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+        if (client is null)
+        {
+            throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
+        }
+
+        string? partnerName = null;
+        if (client.ReferralPartnerId.HasValue)
+        {
+            partnerName = await dbContext.Partners
+                .Where(x => x.Id == client.ReferralPartnerId.Value)
+                .Select(x => x.Name)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return Ok(client.ToResponse(partnerName));
+    }
+
+    [HttpPut("{clientId:int}")]
+    public async Task<ActionResult<ClientResponse>> UpdateClient(int clientId, [FromBody] ClientUpdateRequest request, CancellationToken cancellationToken)
+    {
+        var client = await dbContext.Clients.FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+        if (client is null)
+        {
+            throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Name))
+        {
+            client.Name = request.Name.Trim();
+        }
+
+        client.Phone = request.Phone;
+        client.BirthDate = request.BirthDate;
+        client.Age = request.Age;
+        client.Gender = request.Gender;
+        client.Address = request.Address;
+        client.ReferralPartnerId = request.ReferralPartnerId;
+        client.ReferralCustom = request.ReferralCustom;
+        client.Status = StatusHelper.Normalize(request.Status ?? client.Status);
+        client.StoppedReason = request.StoppedReason;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        string? partnerName = null;
+        if (client.ReferralPartnerId.HasValue)
+        {
+            partnerName = await dbContext.Partners
+                .Where(x => x.Id == client.ReferralPartnerId.Value)
+                .Select(x => x.Name)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return Ok(client.ToResponse(partnerName));
+    }
+
+    [HttpDelete("{clientId:int}")]
+    public async Task<IActionResult> DeleteClient(int clientId, CancellationToken cancellationToken)
+    {
+        var client = await dbContext.Clients.FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+        if (client is null)
+        {
+            throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
+        }
+
+        dbContext.Clients.Remove(client);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { success = true, message = "Клиент удален" });
+    }
+}

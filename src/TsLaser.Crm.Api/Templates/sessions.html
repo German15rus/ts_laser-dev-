@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сеансы лазеротерапии — TS Laser CRM</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=2">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23FCD34D' width='100' height='100' rx='20'/><text y='70' x='50' text-anchor='middle' font-size='60'>⚡</text></svg>">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <img src="/static/logo.png" alt="TS Laser" class="logo-img">
+            </a>
+            <a href="/" class="btn btn-secondary btn-sm">
+                ← К списку клиентов
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Client Info -->
+        <div class="client-info-bar card-flat mb-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <span class="text-muted">Клиент:</span>
+                    <a href="#" id="client-link" class="client-name-link">
+                        <strong id="client-name">Загрузка...</strong>
+                    </a>
+                </div>
+                <div class="flashes-total">
+                    <span class="text-muted" id="flashes-label">Итог по вспышкам:</span>
+                    <span class="flashes-count" id="total-flashes">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="sessions" onclick="switchSessionsTab('sessions')">
+                💉 Сеансы
+            </button>
+            <button class="tab" data-tab="tattoos" onclick="switchSessionsTab('tattoos')">
+                🎨 Татуировки/Татуаж
+            </button>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div id="sessions-tab" class="tab-content">
+            <!-- Filter Bar with Add Button -->
+            <div class="filter-bar">
+                <button class="btn btn-primary" onclick="showSessionForm()">
+                    + Добавить сеанс
+                </button>
+                <select id="sessions-tattoo-filter" class="select input-sm">
+                    <option value="">Все татуировки/татуаж</option>
+                    <!-- Filled by JS -->
+                </select>
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleExportMenu('sessions')">
+                        📥 Экспорт
+                    </button>
+                    <div id="sessions-export-menu" class="export-menu hidden">
+                        <button onclick="exportData('sessions', 'csv')">CSV</button>
+                        <button onclick="exportData('sessions', 'xlsx')">Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sessions Table -->
+            <div class="table-container" id="sessions-table-container">
+                <table class="table sessions-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="tattoo_name">Название тату ↕</th>
+                            <th class="sortable" data-sort="session_number">№ сеанса ↕</th>
+                            <th class="sortable" data-sort="session_date">Дата ↕</th>
+                            <th>Длина волны</th>
+                            <th>Диаметр</th>
+                            <th>Плотность</th>
+                            <th>Герц</th>
+                            <th>Вспышки</th>
+                            <th>Перерыв</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessions-table-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="sessions-empty" class="empty-state hidden">
+                <div class="empty-state-icon">💉</div>
+                <p>Сеансов пока нет</p>
+                <button class="btn btn-primary mt-4" onclick="showSessionForm()">
+                    + Добавить первый сеанс
+                </button>
+            </div>
+        </div>
+
+        <!-- Tattoos Tab -->
+        <div id="tattoos-tab" class="tab-content hidden">
+            <!-- Filter Bar with Add Button -->
+            <div class="filter-bar">
+                <button class="btn btn-primary" onclick="showTattooForm()">
+                    + Добавить татуировку/татуаж
+                </button>
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleExportMenu('tattoos')">
+                        📥 Экспорт
+                    </button>
+                    <div id="tattoos-export-menu" class="export-menu hidden">
+                        <button onclick="exportData('tattoos', 'csv')">CSV</button>
+                        <button onclick="exportData('tattoos', 'xlsx')">Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tattoos Table -->
+            <div class="table-container" id="tattoos-table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Зона</th>
+                            <th>Коррекций</th>
+                            <th>Последний пигмент</th>
+                            <th>Последний лазер</th>
+                            <th>Желаемый результат</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tattoos-table-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tattoos-empty" class="empty-state hidden">
+                <div class="empty-state-icon">🎨</div>
+                <p>Татуировок пока нет</p>
+                <button class="btn btn-primary mt-4" onclick="showTattooForm()">
+                    + Добавить первую татуировку/татуаж
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Session Form Modal -->
+    <div id="session-form-modal" class="modal-overlay hidden" onclick="hideSessionForm(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="session-form-title">Добавить сеанс</h3>
+                <button class="modal-close" onclick="hideSessionForm()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="session-form" autocomplete="off" novalidate>
+                    <input type="hidden" id="session-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Зона удаления</label>
+                        <select id="session-zone-select" class="select w-full">
+                            <option value="">— Все зоны —</option>
+                            <!-- Filled by JS with unique zones from tattoos -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label class="form-label">Татуировка/Татуаж</label>
+                            <select id="session-tattoo-select" class="select w-full">
+                                <option value="">— Выберите татуировку/татуаж —</option>
+                                <!-- Filled by JS with tattoos from DB -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="session-number">№ сеанса</label>
+                            <input type="number" id="session-number" class="input" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="session-part">Участок</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="session-part" class="input" placeholder="Выберите или введите..." autocomplete="off">
+                                <div id="session-part-dropdown" class="autocomplete-dropdown hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="session-wavelength">Длина волны</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="session-wavelength" class="input" placeholder="Выберите или введите..." autocomplete="off">
+                                <div id="session-wavelength-dropdown" class="autocomplete-dropdown hidden"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="session-diameter">Диаметр</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="session-diameter" class="input" placeholder="Выберите или введите..." autocomplete="off">
+                                <div id="session-diameter-dropdown" class="autocomplete-dropdown hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="session-density">Плотность</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="session-density" class="input" placeholder="Выберите или введите..." autocomplete="off">
+                                <div id="session-density-dropdown" class="autocomplete-dropdown hidden"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="session-hertz">Герц</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="session-hertz" class="input" placeholder="Выберите или введите..." autocomplete="off">
+                                <div id="session-hertz-dropdown" class="autocomplete-dropdown hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="session-flashes">Количество вспышек</label>
+                            <input type="number" id="session-flashes" class="input" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="session-date">Дата сеанса</label>
+                            <input type="date" id="session-date" class="input">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="session-break">Перерыв</label>
+                        <input type="text" id="session-break" class="input" placeholder="Например: 4-6 недель">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="session-comment">Комментарий</label>
+                        <textarea id="session-comment" class="textarea"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideSessionForm()">
+                    Отмена
+                </button>
+                <button type="submit" form="session-form" class="btn btn-primary">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Detail Modal -->
+    <div id="session-modal" class="modal-overlay hidden" onclick="closeSessionModal(event)">
+        <div class="modal animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-session-title">Сеанс</h3>
+                <button class="modal-close" onclick="closeSessionModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-session-body">
+                <!-- Filled by JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="editSessionFromModal()">Редактировать</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteSessionFromModal()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tattoo Form Modal -->
+    <div id="tattoo-form-modal" class="modal-overlay hidden" onclick="hideTattooForm(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="tattoo-form-title">Добавить татуировку/татуаж</h3>
+                <button class="modal-close" onclick="hideTattooForm()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="tattoo-form" autocomplete="off" novalidate>
+                    <input type="hidden" id="tattoo-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="tattoo-name">Название *</label>
+                            <input type="text" id="tattoo-name" class="input" required placeholder="Например: Рукав, Дракон, Татуаж бровей...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="tattoo-zone">Зона удаления</label>
+                            <input type="text" id="tattoo-zone" class="input" placeholder="Например: левая рука, спина, брови...">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="tattoo-corrections">Коррекций / перекрытий</label>
+                            <input type="text" id="tattoo-corrections" class="input" placeholder="Например: 2 коррекции">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="tattoo-last-pigment">Последнее внесение пигмента</label>
+                            <input type="date" id="tattoo-last-pigment" class="input">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="tattoo-last-laser">Последнее удаление лазером</label>
+                            <input type="date" id="tattoo-last-laser" class="input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="tattoo-prev-place">Где удаляли ранее</label>
+                            <input type="text" id="tattoo-prev-place" class="input" placeholder="Название салона/клиники">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="tattoo-no-laser">
+                            <span>Не удалял лазером ранее</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="tattoo-desired-result">Желаемый результат</label>
+                        <textarea id="tattoo-desired-result" class="textarea" placeholder="Полное удаление, осветление под перекрытие..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideTattooForm()">
+                    Отмена
+                </button>
+                <button type="submit" form="tattoo-form" class="btn btn-primary">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tattoo Detail Modal -->
+    <div id="tattoo-modal" class="modal-overlay hidden" onclick="closeTattooModal(event)">
+        <div class="modal animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-tattoo-title">Татуировка/Татуаж</h3>
+                <button class="modal-close" onclick="closeTattooModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-tattoo-body">
+                <!-- Filled by JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="editTattooFromModal()">Редактировать</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteTattooFromModal()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CLIENT_ID = {{ client_id }};
+    </script>
+    <script src="/static/js/sessions.js"></script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TS Laser - Запись на консультацию</title>
+    <meta name="description" content="Запишитесь на консультацию по удалению татуировки и татуажа в TS Laser.">
+    <link rel="stylesheet" href="/static/css/landing.css?v=1">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="/booking" class="brand">TS Laser</a>
+            <a href="#booking" class="btn btn-primary btn-sm">Записаться</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Лазерное удаление тату и татуажа</p>
+                    <h1>Безопасно и поэтапно убираем нежелательный пигмент</h1>
+                    <p class="hero-text">Заполните форму, и мы подготовим для вас персональные рекомендации перед первым визитом.</p>
+                    <div class="hero-actions">
+                        <a href="#booking" class="btn btn-primary">Оставить заявку</a>
+                        <a href="#faq" class="btn btn-ghost">Частые вопросы</a>
+                    </div>
+                    <ul class="hero-badges">
+                        <li>Индивидуальный подход</li>
+                        <li>Понятный план сеансов</li>
+                        <li>Сопровождение после процедуры</li>
+                    </ul>
+                </div>
+                <div class="hero-card">
+                    <h2>Что получите после заявки</h2>
+                    <ul>
+                        <li>Первичную оценку вашего случая</li>
+                        <li>Рекомендации по подготовке к визиту</li>
+                        <li>План по этапам удаления</li>
+                    </ul>
+                    <a href="#booking" class="btn btn-primary w-full">Заполнить анкету</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <h2>Почему выбирают TS Laser</h2>
+                <div class="cards-3">
+                    <article class="card">
+                        <h3>Понятный процесс</h3>
+                        <p>На каждом этапе объясняем, что будет происходить и какой результат ожидать.</p>
+                    </article>
+                    <article class="card">
+                        <h3>Аккуратный протокол</h3>
+                        <p>Собираем анамнез перед записью, чтобы подобрать корректную тактику.</p>
+                    </article>
+                    <article class="card">
+                        <h3>Контроль динамики</h3>
+                        <p>Ведём историю параметров и отслеживаем прогресс от сеанса к сеансу.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section section-alt">
+            <div class="container">
+                <h2>Как проходит путь</h2>
+                <div class="steps">
+                    <div class="step"><span>1</span><p>Вы оставляете заявку на сайте.</p></div>
+                    <div class="step"><span>2</span><p>Мы уточняем детали и согласовываем удобное время.</p></div>
+                    <div class="step"><span>3</span><p>Проводим консультацию и подбираем параметры.</p></div>
+                    <div class="step"><span>4</span><p>Сопровождаем вас до желаемого результата.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="faq">
+            <div class="container">
+                <h2>Частые вопросы</h2>
+                <div class="faq-list">
+                    <details>
+                        <summary>Сколько нужно сеансов?</summary>
+                        <p>Количество зависит от глубины пигмента, зоны и давности тату/татуажа. Точный план обсуждается после анкеты и консультации.</p>
+                    </details>
+                    <details>
+                        <summary>Можно ли удалить не полностью, а под перекрытие?</summary>
+                        <p>Да, это частый сценарий. Укажите желаемый результат в форме, чтобы мы учли это заранее.</p>
+                    </details>
+                    <details>
+                        <summary>Что важно перед первым визитом?</summary>
+                        <p>Подготовка зависит от вашего случая. После заявки мы дадим персональные рекомендации.</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <section class="section section-accent" id="booking">
+            <div class="container">
+                <div class="form-wrap">
+                    <div class="form-head">
+                        <h2>Запись на консультацию</h2>
+                        <p>Поля анкеты соответствуют вашей текущей форме записи.</p>
+                    </div>
+
+                    <form id="booking-form" class="booking-form" novalidate>
+                        <input type="text" name="website" id="website" autocomplete="off" tabindex="-1" class="hp-field">
+                        <input type="hidden" name="form_started_at" id="form_started_at">
+
+                        <div class="field">
+                            <label for="full_name">ФИО (полностью) *</label>
+                            <input id="full_name" name="full_name" type="text" required maxlength="255">
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="field">
+                                <label for="phone">Номер телефона без +7/8 *</label>
+                                <input id="phone" name="phone" type="tel" inputmode="tel" required maxlength="32" placeholder="9XXXXXXXXX">
+                            </div>
+                            <div class="field">
+                                <label for="birth_date">Дата рождения *</label>
+                                <input id="birth_date" name="birth_date" type="date" required>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="address">Адрес (для территориального анализа) *</label>
+                            <input id="address" name="address" type="text" required maxlength="500" placeholder="Город, район">
+                        </div>
+
+                        <div class="field">
+                            <label for="referral_source">Как Вы обо мне узнали? *</label>
+                            <select id="referral_source" name="referral_source" required>
+                                <option value="">Выберите вариант</option>
+                                <option value="Инстаграм">Инстаграм</option>
+                                <option value="Сарафанное радио(порекомендовали)">Сарафанное радио(порекомендовали)</option>
+                                <option value="Авито">Авито</option>
+                                <option value="Реклама">Реклама</option>
+                                <option value="__other__">Другое</option>
+                            </select>
+                            <input id="referral_other" type="text" maxlength="255" placeholder="Уточните источник" class="hidden-input">
+                        </div>
+
+                        <div class="field">
+                            <label for="tattoo_type">У Вас *</label>
+                            <select id="tattoo_type" name="tattoo_type" required>
+                                <option value="">Выберите вариант</option>
+                                <option value="Татуировка">Татуировка</option>
+                                <option value="Татуаж бровей">Татуаж бровей</option>
+                                <option value="Татуаж век">Татуаж век</option>
+                                <option value="Татуаж губ">Татуаж губ</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="tattoo_age">Сколько времени татуировке/татуажу? *</label>
+                            <input id="tattoo_age" name="tattoo_age" type="text" required maxlength="255" placeholder="Например: 3 года">
+                        </div>
+
+                        <div class="field">
+                            <label for="corrections_mode">Были коррекции/перекрытия? *</label>
+                            <select id="corrections_mode" required>
+                                <option value="Нет">Нет</option>
+                                <option value="__details__">Да, указать</option>
+                            </select>
+                            <input id="corrections_details" type="text" maxlength="500" placeholder="Если да, то сколько?" class="hidden-input">
+                        </div>
+
+                        <div class="field">
+                            <label for="previous_removal_mode">Пробовали ранее удалять? *</label>
+                            <select id="previous_removal_mode" required>
+                                <option value="Нет">Нет</option>
+                                <option value="__details__">Да, указать</option>
+                            </select>
+                            <input id="previous_removal_details" type="text" maxlength="500" placeholder="Когда был крайний сеанс?" class="hidden-input">
+                        </div>
+
+                        <div class="field">
+                            <label for="previous_removal_where">Если ранее удаляли, то у кого? *</label>
+                            <input id="previous_removal_where" name="previous_removal_where" type="text" required maxlength="500" placeholder="Если не удаляли, напишите: Не удалял(а)">
+                        </div>
+
+                        <div class="field">
+                            <label for="desired_result_mode">Какой результат хотите получить? *</label>
+                            <select id="desired_result_mode" required>
+                                <option value="Чистая кожа">Чистая кожа</option>
+                                <option value="Под перекрытие">Под перекрытие</option>
+                                <option value="__other__">Другое</option>
+                            </select>
+                            <input id="desired_result_other" type="text" maxlength="500" placeholder="Опишите желаемый результат" class="hidden-input">
+                        </div>
+
+                        <label class="consent-row">
+                            <input type="checkbox" id="consent_personal_data" required>
+                            <span>Согласен(а) на обработку персональных данных *</span>
+                        </label>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="submit-btn">Отправить заявку</button>
+                            <p class="form-note">После отправки мы свяжемся с вами для подтверждения записи.</p>
+                        </div>
+
+                        <div id="form-success" class="alert success hidden">Спасибо! Заявка отправлена, мы скоро свяжемся с вами.</div>
+                        <div id="form-error" class="alert error hidden"></div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>TS Laser</p>
+            <p>Для связи: WhatsApp / Telegram</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/landing.js?v=1"></script>
+</body>
+</html>

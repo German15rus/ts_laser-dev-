@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TsLaser.Crm.Api/TsLaser.Crm.Api.csproj" />
+  </Folder>
+</Solution>

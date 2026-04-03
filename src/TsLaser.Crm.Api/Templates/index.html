@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TS Laser CRM</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=2">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23FCD34D' width='100' height='100' rx='20'/><text y='70' x='50' text-anchor='middle' font-size='60'>⚡</text></svg>">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <img src="/static/logo.png" alt="TS Laser" class="logo-img">
+            </a>
+            <button class="btn btn-secondary btn-sm" onclick="logout()">
+                Выйти
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="clients" onclick="switchTab('clients')">
+                👤 Клиенты
+            </button>
+            <button class="tab" data-tab="partners" onclick="switchTab('partners')">
+                🤝 Партнёры
+            </button>
+        </div>
+
+        <!-- Clients Tab -->
+        <div id="clients-tab" class="tab-content">
+            <!-- Filter Bar with Add Button -->
+            <div class="filter-bar">
+                <button class="btn btn-primary" onclick="showClientForm()">
+                    + Добавить клиента
+                </button>
+                <input type="text" id="clients-search" class="input input-sm" placeholder="🔍 Поиск по ФИО или телефону..." style="flex: 1; min-width: 200px;">
+                <select id="clients-status-filter" class="select input-sm">
+                    <option value="">Все статусы</option>
+                    <option value="active">В процессе</option>
+                    <option value="completed">Завершено</option>
+                    <option value="stopped">Перестал ходить</option>
+                    <option value="lost">Потерялся</option>
+                </select>
+                <select id="clients-partner-filter" class="select input-sm">
+                    <option value="">Все партнёры</option>
+                    <!-- Filled by JS -->
+                </select>
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleExportMenu('clients')">
+                        📥 Экспорт
+                    </button>
+                    <div id="clients-export-menu" class="export-menu hidden">
+                        <button onclick="exportData('clients', 'csv')">CSV</button>
+                        <button onclick="exportData('clients', 'xlsx')">Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clients Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="name">ФИО ↕</th>
+                            <th>Телефон</th>
+                            <th>Адрес</th>
+                            <th class="sortable" data-sort="status">Статус ↕</th>
+                            <th class="sortable" data-sort="created_at">Создан ↕</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="clients-table-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="clients-empty" class="empty-state hidden">
+                <div class="empty-state-icon">📋</div>
+                <p>Клиентов пока нет</p>
+                <button class="btn btn-primary mt-4" onclick="showClientForm()">
+                    + Добавить первого клиента
+                </button>
+            </div>
+        </div>
+
+        <!-- Partners Tab -->
+        <div id="partners-tab" class="tab-content hidden">
+            <!-- Filter Bar with Add Button -->
+            <div class="filter-bar">
+                <button class="btn btn-primary" onclick="showPartnerForm()">
+                    + Добавить партнёра
+                </button>
+                <input type="text" id="partners-search" class="input input-sm" placeholder="🔍 Поиск по названию..." style="flex: 1; min-width: 200px;">
+                <select id="partners-type-filter" class="select input-sm">
+                    <option value="">Все типы</option>
+                    <!-- Filled by JS -->
+                </select>
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleExportMenu('partners')">
+                        📥 Экспорт
+                    </button>
+                    <div id="partners-export-menu" class="export-menu hidden">
+                        <button onclick="exportData('partners', 'csv')">CSV</button>
+                        <button onclick="exportData('partners', 'xlsx')">Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partners Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="name">Название / ФИО ↕</th>
+                            <th>Контакты</th>
+                            <th>Тип</th>
+                            <th>Условия</th>
+                            <th class="sortable" data-sort="created_at">Создан ↕</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="partners-table-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="partners-empty" class="empty-state hidden">
+                <div class="empty-state-icon">🤝</div>
+                <p>Партнёров пока нет</p>
+                <button class="btn btn-primary mt-4" onclick="showPartnerForm()">
+                    + Добавить первого партнёра
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Client Form Modal -->
+    <div id="client-form-modal" class="modal-overlay hidden" onclick="hideClientForm(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="client-form-title">Добавить клиента</h3>
+                <button class="modal-close" onclick="hideClientForm()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="client-form" autocomplete="off" novalidate>
+                    <input type="hidden" id="client-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="client-name">ФИО *</label>
+                        <input type="text" id="client-name" class="input" required autocomplete="off">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="client-phone">Телефон</label>
+                            <input type="tel" id="client-phone" class="input" placeholder="+7 (___) ___-__-__" autocomplete="off">
+                            <div class="form-hint">Вводите только цифры</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="client-birth-date">Дата рождения</label>
+                            <input type="date" id="client-birth-date" class="input">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="client-age">Возраст</label>
+                            <input type="number" id="client-age" class="input" min="0" max="120">
+                            <div class="form-hint">Автоматически по дате рождения</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Пол</label>
+                            <div class="radio-group mt-2">
+                                <label class="radio-label">
+                                    <input type="radio" name="client-gender" value="М">
+                                    Мужской
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="client-gender" value="Ж">
+                                    Женский
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="client-address">Адрес</label>
+                        <input type="text" id="client-address" class="input" placeholder="Город, район, улица...">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Как узнали обо мне?</label>
+                        <select id="client-referral-partner" class="select w-full">
+                            <option value="">— Не из партнёрской базы —</option>
+                        </select>
+                        <input type="text" id="client-referral-custom" class="input mt-2" placeholder="Или введите свой вариант...">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Статус клиента</label>
+                        <select id="client-status" class="select w-full">
+                            <option value="active">В процессе</option>
+                            <option value="completed">Удаление завершено</option>
+                            <option value="stopped">Перестал ходить</option>
+                            <option value="lost">Потерялся</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="stopped-reason-group">
+                        <label class="form-label" for="client-stopped-reason">Причина ухода</label>
+                        <textarea id="client-stopped-reason" class="textarea"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideClientForm()">
+                    Отмена
+                </button>
+                <button type="submit" form="client-form" class="btn btn-primary">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner Form Modal -->
+    <div id="partner-form-modal" class="modal-overlay hidden" onclick="hidePartnerForm(event)">
+        <div class="modal animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="partner-form-title">Добавить партнёра</h3>
+                <button class="modal-close" onclick="hidePartnerForm()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="partner-form" autocomplete="off" novalidate>
+                    <input type="hidden" id="partner-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="partner-name">Название / ФИО *</label>
+                        <input type="text" id="partner-name" class="input" required autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="partner-contacts">Контакты</label>
+                        <input type="text" id="partner-contacts" class="input" placeholder="Телефон, Instagram, Telegram..." autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="partner-type">Тип</label>
+                        <input type="text" id="partner-type" class="input" placeholder="Тату-салон, мастер и т.п." autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="partner-terms">Условия партнёрства</label>
+                        <textarea id="partner-terms" class="textarea"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="partner-comment">Комментарий</label>
+                        <textarea id="partner-comment" class="textarea"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hidePartnerForm()">
+                    Отмена
+                </button>
+                <button type="submit" form="partner-form" class="btn btn-primary">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Detail Modal -->
+    <div id="client-modal" class="modal-overlay hidden" onclick="closeClientModal(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-client-name">Клиент</h3>
+                <button class="modal-close" onclick="closeClientModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-client-body">
+                <!-- Filled by JS -->
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="modal-client-sessions-btn" class="btn btn-primary btn-sm">💉 Сеансы</a>
+                <button class="btn btn-secondary btn-sm" onclick="editClientFromModal()">Редактировать</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteClientFromModal()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner Detail Modal -->
+    <div id="partner-modal" class="modal-overlay hidden" onclick="closePartnerModal(event)">
+        <div class="modal animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-partner-name">Партнёр</h3>
+                <button class="modal-close" onclick="closePartnerModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-partner-body">
+                <!-- Filled by JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="editPartnerFromModal()">Редактировать</button>
+                <button class="btn btn-danger btn-sm" onclick="deletePartnerFromModal()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
