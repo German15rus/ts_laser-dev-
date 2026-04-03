@@ -132,9 +132,26 @@ if (app.Environment.IsDevelopment())
 string? importPath = null;
 for (var i = 0; i < args.Length; i++)
 {
-    if (args[i].Equals("--import-legacy", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+    if (args[i].Equals("--import-legacy", StringComparison.OrdinalIgnoreCase))
     {
-        importPath = args[i + 1];
+        if (i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
+        {
+            importPath = args[i + 1];
+        }
+        else
+        {
+            var cwd = Directory.GetCurrentDirectory();
+            var candidates = new[]
+            {
+                Path.Combine(cwd, "legacy_python_backend", "tslaser.db"),
+                Path.GetFullPath(Path.Combine(cwd, "..", "legacy_python_backend", "tslaser.db")),
+                Path.GetFullPath(Path.Combine(cwd, "..", "..", "legacy_python_backend", "tslaser.db")),
+                Path.GetFullPath(Path.Combine(cwd, "..", "..", "..", "legacy_python_backend", "tslaser.db")),
+            };
+
+            importPath = candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+        }
+
         break;
     }
 }
@@ -147,6 +164,13 @@ using (var scope = app.Services.CreateScope())
 
 if (!string.IsNullOrWhiteSpace(importPath))
 {
+    if (!File.Exists(importPath))
+    {
+        throw new FileNotFoundException(
+            "Legacy database file was not found. Expected tslaser.db. Pass explicit path: --import-legacy <path-to-tslaser.db>",
+            importPath);
+    }
+
     using var importScope = app.Services.CreateScope();
     var importer = importScope.ServiceProvider.GetRequiredService<LegacyImportService>();
     await importer.ImportAsync(importPath);

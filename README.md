@@ -36,8 +36,10 @@ dotnet run --project src/TsLaser.Crm.Api/TsLaser.Crm.Api.csproj -- --urls http:/
 ## Импорт legacy данных
 
 ```bash
-dotnet run --project src/TsLaser.Crm.Api/TsLaser.Crm.Api.csproj -- --import-legacy legacy_python_backend/tslaser.db.backup
+dotnet run --project src/TsLaser.Crm.Api/TsLaser.Crm.Api.csproj -- --import-legacy legacy_python_backend/tslaser.db
 ```
+
+Или без пути (по умолчанию ищется `legacy_python_backend/tslaser.db`).
 
 ## Конфигурация
 
