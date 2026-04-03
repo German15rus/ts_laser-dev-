@@ -416,3 +416,13 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Python legacy artifacts
+**/.venv/
+**/venv/
+**/__pycache__/
+__MACOSX/
+*.DS_Store
+
+# Local runtime data
+src/TsLaser.Crm.Api/Data/
