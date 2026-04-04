@@ -14,9 +14,12 @@
             <a href="/" class="logo">
                 <img src="/static/logo.png" alt="TS Laser" class="logo-img">
             </a>
-            <button class="btn btn-secondary btn-sm" onclick="logout()">
-                Выйти
-            </button>
+            <div class="flex gap-2">
+                <a href="/bookings" class="btn btn-secondary btn-sm">Заявки</a>
+                <button class="btn btn-secondary btn-sm" onclick="logout()">
+                    Выйти
+                </button>
+            </div>
         </div>
     </header>
 
@@ -317,3 +320,4 @@
     <script src="/static/js/app.js"></script>
 </body>
 </html>
+

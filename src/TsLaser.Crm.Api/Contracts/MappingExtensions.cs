@@ -79,4 +79,42 @@ public static class MappingExtensions
         CreatedAt = session.CreatedAt,
         UpdatedAt = session.UpdatedAt,
     };
+
+    public static BookingListItemResponse ToListResponse(this IntakeSubmission submission) => new()
+    {
+        Id = submission.Id,
+        FullName = submission.FullName,
+        Phone = submission.Phone,
+        TattooType = submission.TattooType,
+        ReferralSource = submission.ReferralSource,
+        Status = submission.Status,
+        CreatedAt = submission.CreatedAt,
+        ReviewedAt = submission.ReviewedAt,
+    };
+
+    public static BookingDetailsResponse ToDetailsResponse(this IntakeSubmission submission) => new()
+    {
+        Id = submission.Id,
+        FullName = submission.FullName,
+        Phone = submission.Phone,
+        BirthDate = submission.BirthDate,
+        Address = submission.Address,
+        ReferralSource = submission.ReferralSource,
+        TattooType = submission.TattooType,
+        TattooAge = submission.TattooAge,
+        CorrectionsInfo = submission.CorrectionsInfo,
+        PreviousRemovalInfo = submission.PreviousRemovalInfo,
+        PreviousRemovalWhere = submission.PreviousRemovalWhere,
+        DesiredResult = submission.DesiredResult,
+        Status = submission.Status,
+        Source = submission.Source,
+        IsNewClient = submission.IsNewClient,
+        RejectionReason = submission.RejectionReason,
+        ReviewedBy = submission.ReviewedBy,
+        ReviewedAt = submission.ReviewedAt,
+        ApprovedClientId = submission.ApprovedClientId,
+        ApprovedTattooId = submission.ApprovedTattooId,
+        CreatedAt = submission.CreatedAt,
+        UpdatedAt = submission.UpdatedAt,
+    };
 }
