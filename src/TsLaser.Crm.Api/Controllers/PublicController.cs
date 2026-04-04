@@ -2,10 +2,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
+using TsLaser.Crm.Api.Domain.Enums;
 using TsLaser.Crm.Api.Infrastructure.Persistence;
 
 namespace TsLaser.Crm.Api.Controllers;
@@ -49,84 +49,6 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
         var previousRemovalWhere = InputCleaner.CleanRequired(booking.PreviousRemovalWhere, 500);
         var desiredResult = InputCleaner.CleanRequired(booking.DesiredResult, 500);
 
-        var client = await dbContext.Clients.FirstOrDefaultAsync(x => x.Phone == normalizedPhone, cancellationToken);
-        var isNewClient = client is null;
-
-        if (client is null)
-        {
-            client = new Client
-            {
-                Name = fullName,
-                Phone = normalizedPhone,
-                BirthDate = booking.BirthDate,
-                Address = address,
-                ReferralCustom = referralSource,
-                Status = "active",
-            };
-
-            dbContext.Clients.Add(client);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        else
-        {
-            if (InputCleaner.IsNotFilled(client.Name))
-            {
-                client.Name = fullName;
-            }
-
-            if (client.BirthDate is null)
-            {
-                client.BirthDate = booking.BirthDate;
-            }
-
-            if (InputCleaner.IsNotFilled(client.Address))
-            {
-                client.Address = address;
-            }
-
-            if (InputCleaner.IsNotFilled(client.ReferralCustom))
-            {
-                client.ReferralCustom = referralSource;
-            }
-        }
-
-        var tattoo = await dbContext.Tattoos.FirstOrDefaultAsync(
-            x => x.ClientId == client.Id && x.Name == tattooType,
-            cancellationToken);
-
-        if (tattoo is null)
-        {
-            tattoo = new Tattoo
-            {
-                ClientId = client.Id,
-                Name = tattooType,
-                CorrectionsCount = correctionsInfo,
-                NoLaserBefore = InputCleaner.IsNegativeAnswer(previousRemovalInfo),
-                PreviousRemovalPlace = previousRemovalWhere,
-                DesiredResult = desiredResult,
-            };
-
-            dbContext.Tattoos.Add(tattoo);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        else
-        {
-            if (InputCleaner.IsNotFilled(tattoo.CorrectionsCount))
-            {
-                tattoo.CorrectionsCount = correctionsInfo;
-            }
-
-            if (InputCleaner.IsNotFilled(tattoo.PreviousRemovalPlace))
-            {
-                tattoo.PreviousRemovalPlace = previousRemovalWhere;
-            }
-
-            if (InputCleaner.IsNotFilled(tattoo.DesiredResult))
-            {
-                tattoo.DesiredResult = desiredResult;
-            }
-        }
-
         var payloadDict = new Dictionary<string, object?>
         {
             ["full_name"] = booking.FullName,
@@ -146,10 +68,8 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
             ["website"] = booking.Website,
         };
 
-        dbContext.IntakeSubmissions.Add(new IntakeSubmission
+        var submission = new IntakeSubmission
         {
-            ClientId = client.Id,
-            TattooId = tattoo.Id,
             FullName = fullName,
             Phone = normalizedPhone,
             BirthDate = booking.BirthDate,
@@ -162,12 +82,15 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
             PreviousRemovalWhere = previousRemovalWhere,
             DesiredResult = desiredResult,
             Source = "landing",
-            IsNewClient = isNewClient,
+            Status = IntakeSubmissionStatus.Pending,
+            IsNewClient = false,
             RawPayload = JsonSerializer.Serialize(payloadDict),
-        });
+        };
+
+        dbContext.IntakeSubmissions.Add(submission);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return Ok(new PublicBookingResponse(true, "Booking request saved", client.Id, isNewClient));
+        return Ok(new PublicBookingResponse(true, "Booking request saved", submission.Id));
     }
 }

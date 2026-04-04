@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заявки с лендинга - TS Laser CRM</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=2">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <img src="/static/logo.png" alt="TS Laser" class="logo-img">
+            </a>
+            <div class="flex gap-2">
+                <a href="/" class="btn btn-secondary btn-sm">К CRM</a>
+                <button class="btn btn-secondary btn-sm" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <h1>Заявки с лендинга</h1>
+            <button class="btn btn-secondary btn-sm" onclick="loadBookings()">Обновить</button>
+        </div>
+
+        <div class="filter-bar">
+            <select id="bookings-status-filter" class="select input-sm">
+                <option value="pending">Новые</option>
+                <option value="approved">Одобренные</option>
+                <option value="rejected">Отклоненные</option>
+            </select>
+        </div>
+
+        <div class="table-container" id="bookings-table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Дата</th>
+                        <th>ФИО</th>
+                        <th>Телефон</th>
+                        <th>Тип</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody id="bookings-table-body"></tbody>
+            </table>
+        </div>
+
+        <div id="bookings-empty" class="empty-state hidden">
+            <div class="empty-state-icon">📭</div>
+            <p>Заявок в выбранном статусе нет</p>
+        </div>
+    </main>
+
+    <div id="booking-modal" class="modal-overlay hidden" onclick="closeBookingModal(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="booking-modal-title">Заявка</h3>
+                <button class="modal-close" onclick="closeBookingModal()">✕</button>
+            </div>
+            <div class="modal-body" id="booking-modal-body"></div>
+            <div class="modal-body hidden" id="booking-reject-wrap">
+                <label class="form-label" for="booking-reject-reason">Причина отклонения (необязательно)</label>
+                <textarea id="booking-reject-reason" class="textarea" placeholder="Комментарий для истории заявки"></textarea>
+            </div>
+            <div class="modal-footer" id="booking-modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="closeBookingModal()">Закрыть</button>
+                <button id="booking-approve-btn" class="btn btn-primary btn-sm" onclick="approveBooking()">Одобрить</button>
+                <button id="booking-reject-btn" class="btn btn-danger btn-sm" onclick="rejectBooking()">Отклонить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/bookings.js"></script>
+</body>
+</html>

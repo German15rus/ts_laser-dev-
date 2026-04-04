@@ -105,6 +105,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<LegacyImportService>();
+builder.Services.AddScoped<BookingModerationService>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<TemplateService>();
 builder.Services.AddSingleton<ExportService>();

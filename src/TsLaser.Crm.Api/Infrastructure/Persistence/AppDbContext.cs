@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Domain.Entities;
+using TsLaser.Crm.Api.Domain.Enums;
 
 namespace TsLaser.Crm.Api.Infrastructure.Persistence;
 
@@ -127,6 +128,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasKey(x => x.Id);
             entity.Property(x => x.ClientId).HasColumnName("client_id");
             entity.Property(x => x.TattooId).HasColumnName("tattoo_id");
+            entity.Property(x => x.ApprovedClientId).HasColumnName("approved_client_id");
+            entity.Property(x => x.ApprovedTattooId).HasColumnName("approved_tattoo_id");
             entity.Property(x => x.FullName).HasMaxLength(255).HasColumnName("full_name").IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(20).HasColumnName("phone").IsRequired();
             entity.Property(x => x.BirthDate).HasColumnName("birth_date");
@@ -137,7 +140,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.PreviousRemovalInfo).HasColumnName("previous_removal_info");
             entity.Property(x => x.PreviousRemovalWhere).HasColumnName("previous_removal_where");
             entity.Property(x => x.DesiredResult).HasColumnName("desired_result");
+            entity.Property(x => x.Status).HasMaxLength(20).HasColumnName("status").HasDefaultValue(IntakeSubmissionStatus.Pending);
             entity.Property(x => x.IsNewClient).HasColumnName("is_new_client");
+            entity.Property(x => x.ReviewedAt).HasColumnName("reviewed_at");
+            entity.Property(x => x.ReviewedBy).HasMaxLength(100).HasColumnName("reviewed_by");
+            entity.Property(x => x.RejectionReason).HasColumnName("rejection_reason");
             entity.Property(x => x.RawPayload).HasColumnName("raw_payload");
             entity.Property(x => x.Source).HasMaxLength(50).HasColumnName("source").HasDefaultValue("landing");
             entity.Property(x => x.CreatedAt).HasColumnName("created_at");
@@ -145,12 +152,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(x => x.ClientId).HasDatabaseName("ix_intake_submissions_client_id");
             entity.HasIndex(x => x.TattooId).HasDatabaseName("ix_intake_submissions_tattoo_id");
             entity.HasIndex(x => x.Phone).HasDatabaseName("ix_intake_submissions_phone");
+            entity.HasIndex(x => x.Status).HasDatabaseName("ix_intake_submissions_status");
+            entity.HasIndex(x => x.CreatedAt).HasDatabaseName("ix_intake_submissions_created_at");
+            entity.HasIndex(x => x.ApprovedClientId).HasDatabaseName("ix_intake_submissions_approved_client_id");
+            entity.HasIndex(x => x.ApprovedTattooId).HasDatabaseName("ix_intake_submissions_approved_tattoo_id");
 
             entity
                 .HasOne(x => x.Client)
                 .WithMany(x => x.IntakeSubmissions)
                 .HasForeignKey(x => x.ClientId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity
                 .HasOne(x => x.Tattoo)

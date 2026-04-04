@@ -45,4 +45,4 @@ public sealed class PublicBookingCreateRequest
     public string? Website { get; init; }
 }
 
-public sealed record PublicBookingResponse(bool Success, string Message, int ClientId, bool IsNewClient);
+public sealed record PublicBookingResponse(bool Success, string Message, int SubmissionId);

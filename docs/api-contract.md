@@ -49,6 +49,13 @@
 
 - `POST /api/public/booking`
 
+## Booking Moderation (Admin)
+
+- `GET /api/bookings?status=pending|approved|rejected`
+- `GET /api/bookings/{submission_id}`
+- `POST /api/bookings/{submission_id}/approve`
+- `POST /api/bookings/{submission_id}/reject`
+
 ## Pages
 
 - `GET /`

@@ -4,7 +4,7 @@ public sealed class IntakeSubmission : TimestampedEntity
 {
     public int Id { get; set; }
 
-    public int ClientId { get; set; }
+    public int? ClientId { get; set; }
 
     public int? TattooId { get; set; }
 
@@ -32,11 +32,23 @@ public sealed class IntakeSubmission : TimestampedEntity
 
     public string Source { get; set; } = "landing";
 
+    public string Status { get; set; } = "pending";
+
     public bool IsNewClient { get; set; }
+
+    public DateTime? ReviewedAt { get; set; }
+
+    public string? ReviewedBy { get; set; }
+
+    public string? RejectionReason { get; set; }
+
+    public int? ApprovedClientId { get; set; }
+
+    public int? ApprovedTattooId { get; set; }
 
     public string? RawPayload { get; set; }
 
-    public Client Client { get; set; } = null!;
+    public Client? Client { get; set; }
 
     public Tattoo? Tattoo { get; set; }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Domain.Entities;
+using TsLaser.Crm.Api.Domain.Enums;
 using TsLaser.Crm.Api.Infrastructure.Persistence;
 
 namespace TsLaser.Crm.Api.Infrastructure.Services;
@@ -245,6 +246,11 @@ public sealed class LegacyImportService(AppDbContext dbContext, ILogger<LegacyIm
                 DesiredResult = GetString(reader, "desired_result"),
                 Source = GetString(reader, "source") ?? "landing",
                 IsNewClient = GetBool(reader, "is_new_client") ?? false,
+                Status = IntakeSubmissionStatus.Approved,
+                ReviewedAt = GetDateTime(reader, "updated_at") ?? DateTime.UtcNow,
+                ReviewedBy = "legacy-import",
+                ApprovedClientId = clientId,
+                ApprovedTattooId = tattooId,
                 RawPayload = GetString(reader, "raw_payload"),
                 CreatedAt = GetDateTime(reader, "created_at") ?? DateTime.UtcNow,
                 UpdatedAt = GetDateTime(reader, "updated_at") ?? DateTime.UtcNow,
