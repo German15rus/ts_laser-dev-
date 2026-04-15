@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TS Laser - Заявка принята</title>
+    <meta name="description" content="Ваша заявка на консультацию в TS Laser принята и отправлена на рассмотрение.">
+    <link rel="stylesheet" href="/static/css/landing.css?v=1">
+    <style>
+        .thankyou-section {
+            min-height: calc(100vh - 136px);
+            display: flex;
+            align-items: center;
+            padding: 64px 0;
+        }
+        .thankyou-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 56px 48px;
+            max-width: 560px;
+            margin: 0 auto;
+            text-align: center;
+            box-shadow: 0 4px 24px rgba(14, 165, 233, 0.08);
+        }
+        .thankyou-icon {
+            width: 72px;
+            height: 72px;
+            background: var(--success-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 28px;
+        }
+        .thankyou-icon svg {
+            width: 36px;
+            height: 36px;
+            stroke: var(--success-text);
+            stroke-width: 2.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .thankyou-card h1 {
+            margin: 0 0 16px;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .thankyou-card p {
+            margin: 0 0 32px;
+            color: var(--muted);
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+        @media (max-width: 680px) {
+            .thankyou-card {
+                padding: 36px 24px;
+            }
+            .thankyou-card h1 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="/booking" class="brand">TS Laser</a>
+            <a href="#" class="btn btn-primary btn-sm" style="visibility:hidden">Записаться</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="thankyou-section">
+            <div class="container">
+                <div class="thankyou-card">
+                    <div class="thankyou-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <h1>Анкета принята!</h1>
+                    <p>Ваша заявка принята и отправлена на рассмотрение.<br>Мы свяжемся с вами в ближайшее время для согласования деталей.</p>
+                    <a href="/booking" class="btn btn-primary">Вернуться на главную</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>TS Laser</p>
+            <p>Для связи: WhatsApp / Telegram</p>
+        </div>
+    </footer>
+</body>
+</html>

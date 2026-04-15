@@ -435,17 +435,7 @@
                 throw new Error(message);
             }
 
-            successEl.classList.remove('hidden');
-            form.reset();
-            clearAllFieldErrors();
-            startedAtInput.value = String(Date.now());
-
-            toggleOptionalInput(referralSource, referralOther, '__other__');
-            toggleOptionalInput(correctionsMode, correctionsDetails, '__details__');
-            toggleOptionalInput(previousMode, previousDetails, '__details__');
-            toggleOptionalInput(desiredMode, desiredOther, '__other__');
-
-            document.getElementById('previous_removal_where').value = '';
+            window.location.href = '/booking/thank-you';
         } catch (error) {
             const hasFieldError = applyServerErrorToField(error.message);
             if (hasFieldError) {

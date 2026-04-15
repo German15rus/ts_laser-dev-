@@ -61,6 +61,14 @@ public sealed class PagesController(TemplateService templateService) : Controlle
     }
 
     [AllowAnonymous]
+    [HttpGet("booking/thank-you")]
+    public async Task<IActionResult> BookingThankYou(CancellationToken cancellationToken)
+    {
+        var html = await templateService.LoadAsync("thankyou.html", cancellationToken: cancellationToken);
+        return Content(html, "text/html; charset=utf-8");
+    }
+
+    [AllowAnonymous]
     [HttpGet("bookings")]
     public async Task<IActionResult> BookingsPage(CancellationToken cancellationToken)
     {
