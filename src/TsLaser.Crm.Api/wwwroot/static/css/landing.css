@@ -1,13 +1,18 @@
-﻿:root {
-    --bg: #f8fafc;
+﻿html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+}
+
+:root {
+    --bg: #eff6ff;
     --surface: #ffffff;
-    --surface-alt: #eef2ff;
+    --surface-alt: #dde9ff;
     --text: #0f172a;
     --muted: #475569;
-    --brand: #0ea5e9;
-    --brand-dark: #0284c7;
+    --brand: #0284c7;
+    --brand-dark: #0260a8;
     --accent: #f97316;
-    --border: #e2e8f0;
+    --border: #c7d7ed;
     --success-bg: #ecfdf3;
     --success-text: #166534;
     --error-bg: #fef2f2;
@@ -22,7 +27,7 @@ body {
     margin: 0;
     font-family: "Segoe UI", "Helvetica Neue", sans-serif;
     color: var(--text);
-    background: linear-gradient(180deg, #e0f2fe 0%, var(--bg) 40%);
+    background: linear-gradient(180deg, #c7e8fd 0%, var(--bg) 40%);
 }
 
 .container {
@@ -47,10 +52,25 @@ body {
 }
 
 .brand {
-    font-weight: 800;
-    letter-spacing: 0.4px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 17px;
     text-decoration: none;
     color: var(--text);
+    position: relative;
+    padding-bottom: 3px;
+}
+
+.brand::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+    border-radius: 2px;
 }
 
 .hero {
@@ -178,7 +198,7 @@ body {
     width: 30px;
     height: 30px;
     border-radius: 999px;
-    background: #dbeafe;
+    background: #bfdbfe;
     color: #1d4ed8;
     font-weight: 700;
     margin-bottom: 8px;
@@ -212,7 +232,7 @@ body {
 }
 
 .section-accent {
-    background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+    background: linear-gradient(180deg, #f0f9ff 0%, #fff1e0 100%);
     border-top: 1px solid var(--border);
 }
 
@@ -366,6 +386,11 @@ textarea.input-invalid {
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease, background 0.22s ease;
+}
+
+.btn:hover {
+    transform: scale(1.04);
 }
 
 .btn-primary {
@@ -374,13 +399,19 @@ textarea.input-invalid {
 }
 
 .btn-primary:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.08);
+    box-shadow: 0 6px 20px rgba(2, 96, 168, 0.32);
 }
 
 .btn-ghost {
-    border-color: #bae6fd;
+    border-color: #93c5fd;
     color: #0369a1;
-    background: #f0f9ff;
+    background: #e0f2fe;
+}
+
+.btn-ghost:hover {
+    background: #c7e8fd;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.18);
 }
 
 .btn-sm {
