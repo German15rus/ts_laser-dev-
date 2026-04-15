@@ -52,6 +52,9 @@ body {
 }
 
 .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     font-weight: 900;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -60,6 +63,13 @@ body {
     color: var(--text);
     position: relative;
     padding-bottom: 3px;
+}
+
+.brand-emblem {
+    height: 28px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
 }
 
 .brand::after {
