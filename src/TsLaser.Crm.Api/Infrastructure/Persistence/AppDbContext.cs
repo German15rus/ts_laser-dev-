@@ -131,6 +131,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.ApprovedClientId).HasColumnName("approved_client_id");
             entity.Property(x => x.ApprovedTattooId).HasColumnName("approved_tattoo_id");
             entity.Property(x => x.FullName).HasMaxLength(255).HasColumnName("full_name").IsRequired();
+            entity.Property(x => x.Gender).HasMaxLength(50).HasColumnName("gender");
             entity.Property(x => x.Phone).HasMaxLength(20).HasColumnName("phone").IsRequired();
             entity.Property(x => x.BirthDate).HasColumnName("birth_date");
             entity.Property(x => x.ReferralSource).HasMaxLength(255).HasColumnName("referral_source");

@@ -7,6 +7,8 @@
     const successEl = document.getElementById('form-success');
     const errorEl = document.getElementById('form-error');
 
+    const genderSelect = document.getElementById('gender');
+
     const referralSource = document.getElementById('referral_source');
     const referralOther = document.getElementById('referral_other');
 
@@ -163,6 +165,11 @@
             isValid = false;
         } else if (!validateLength(payload.full_name, 255)) {
             setFieldError('full_name', 'Максимум 255 символов.');
+            isValid = false;
+        }
+
+        if (!payload.gender) {
+            setFieldError('gender', 'Выберите пол.');
             isValid = false;
         }
 
@@ -331,7 +338,7 @@
         });
     });
 
-    ['referral_source', 'corrections_mode', 'previous_removal_mode', 'desired_result_mode'].forEach(function (id) {
+    ['gender', 'referral_source', 'corrections_mode', 'previous_removal_mode', 'desired_result_mode'].forEach(function (id) {
         const input = document.getElementById(id);
         if (!input) return;
 
@@ -380,6 +387,7 @@
 
         const payload = {
             full_name: getTrimmedValue('full_name'),
+            gender: genderSelect.value,
             phone: normalizePhoneForBackend(getTrimmedValue('phone')),
             birth_date: getTrimmedValue('birth_date'),
             address: getTrimmedValue('address'),

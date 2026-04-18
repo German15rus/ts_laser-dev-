@@ -1,4 +1,5 @@
-﻿using TsLaser.Crm.Api.Domain.Entities;
+﻿using TsLaser.Crm.Api.Common;
+using TsLaser.Crm.Api.Domain.Entities;
 
 namespace TsLaser.Crm.Api.Contracts;
 
@@ -96,8 +97,10 @@ public static class MappingExtensions
     {
         Id = submission.Id,
         FullName = submission.FullName,
+        Gender = submission.Gender,
         Phone = submission.Phone,
         BirthDate = submission.BirthDate,
+        Age = InputCleaner.CalculateAge(submission.BirthDate),
         Address = submission.Address,
         ReferralSource = submission.ReferralSource,
         TattooType = submission.TattooType,

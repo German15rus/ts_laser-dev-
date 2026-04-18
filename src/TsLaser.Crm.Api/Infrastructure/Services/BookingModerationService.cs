@@ -6,7 +6,7 @@ using TsLaser.Crm.Api.Infrastructure.Persistence;
 
 namespace TsLaser.Crm.Api.Infrastructure.Services;
 
-public sealed class BookingModerationService(AppDbContext dbContext)
+public sealed class BookingModerationService(AppDbContext dbContext, FirestoreService firestoreService)
 {
     public async Task<IntakeSubmission> ApproveAsync(int submissionId, string reviewer, CancellationToken cancellationToken = default)
     {
@@ -40,6 +40,7 @@ public sealed class BookingModerationService(AppDbContext dbContext)
                 Name = fullName,
                 Phone = normalizedPhone,
                 BirthDate = submission.BirthDate,
+                Age = InputCleaner.CalculateAge(submission.BirthDate),
                 Address = address,
                 ReferralCustom = referralSource,
                 Status = "active",
@@ -55,9 +56,10 @@ public sealed class BookingModerationService(AppDbContext dbContext)
                 client.Name = fullName;
             }
 
-            if (client.BirthDate is null)
+            if (client.BirthDate is null && submission.BirthDate is not null)
             {
                 client.BirthDate = submission.BirthDate;
+                client.Age = InputCleaner.CalculateAge(submission.BirthDate);
             }
 
             if (InputCleaner.IsNotFilled(client.Address))
@@ -130,6 +132,7 @@ public sealed class BookingModerationService(AppDbContext dbContext)
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
+        await firestoreService.DeleteSubmissionAsync(submission.Id, cancellationToken);
 
         return submission;
     }
@@ -154,6 +157,7 @@ public sealed class BookingModerationService(AppDbContext dbContext)
         submission.RejectionReason = NormalizeRejectionReason(rejectionReason);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await firestoreService.DeleteSubmissionAsync(submission.Id, cancellationToken);
         return submission;
     }
 

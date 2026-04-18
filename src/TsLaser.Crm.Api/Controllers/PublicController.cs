@@ -7,12 +7,13 @@ using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
 using TsLaser.Crm.Api.Domain.Enums;
 using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Services;
 
 namespace TsLaser.Crm.Api.Controllers;
 
 [ApiController]
 [Route("api/public")]
-public sealed class PublicController(AppDbContext dbContext) : ControllerBase
+public sealed class PublicController(AppDbContext dbContext, FirestoreService firestoreService) : ControllerBase
 {
     [AllowAnonymous]
     [EnableRateLimiting("booking")]
@@ -39,6 +40,7 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
         }
 
         var fullName = InputCleaner.CleanRequired(booking.FullName, 255);
+        var gender = InputCleaner.CleanRequired(booking.Gender, 50);
         var normalizedPhone = InputCleaner.NormalizePhone(booking.Phone);
         var address = InputCleaner.CleanRequired(booking.Address, 500);
         var referralSource = InputCleaner.CleanRequired(booking.ReferralSource, 255);
@@ -52,6 +54,7 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
         var payloadDict = new Dictionary<string, object?>
         {
             ["full_name"] = booking.FullName,
+            ["gender"] = booking.Gender,
             ["phone"] = booking.Phone,
             ["phone_normalized"] = normalizedPhone,
             ["birth_date"] = booking.BirthDate,
@@ -71,6 +74,7 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
         var submission = new IntakeSubmission
         {
             FullName = fullName,
+            Gender = gender,
             Phone = normalizedPhone,
             BirthDate = booking.BirthDate,
             Address = address,
@@ -90,6 +94,7 @@ public sealed class PublicController(AppDbContext dbContext) : ControllerBase
         dbContext.IntakeSubmissions.Add(submission);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await firestoreService.SaveSubmissionAsync(submission, cancellationToken);
 
         return Ok(new PublicBookingResponse(true, "Booking request saved", submission.Id));
     }

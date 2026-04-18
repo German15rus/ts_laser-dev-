@@ -426,3 +426,6 @@ __MACOSX/
 
 # Local runtime data
 src/TsLaser.Crm.Api/Data/
+
+# Firebase credentials
+src/TsLaser.Crm.Api/firebase-key.json

@@ -7,6 +7,9 @@ public sealed class PublicBookingCreateRequest
     [Required, MinLength(2), MaxLength(255)]
     public string FullName { get; init; } = string.Empty;
 
+    [Required, MinLength(1), MaxLength(50)]
+    public string Gender { get; init; } = string.Empty;
+
     [Required, MinLength(5), MaxLength(32)]
     public string Phone { get; init; } = string.Empty;
 

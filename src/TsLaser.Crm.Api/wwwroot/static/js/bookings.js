@@ -121,8 +121,10 @@ async function openBooking(id) {
         document.getElementById("booking-modal-body").innerHTML = `
             <div class="mb-4">${getStatusTag(booking.status)}</div>
             <div class="detail-row"><span class="detail-label">ФИО</span><span class="detail-value">${escapeHtml(booking.full_name)}</span></div>
+            <div class="detail-row"><span class="detail-label">Пол</span><span class="detail-value">${escapeHtml(booking.gender) || "—"}</span></div>
             <div class="detail-row"><span class="detail-label">Телефон</span><span class="detail-value">${formatPhone(booking.phone)}</span></div>
             <div class="detail-row"><span class="detail-label">Дата рождения</span><span class="detail-value">${booking.birth_date || "—"}</span></div>
+            <div class="detail-row"><span class="detail-label">Возраст</span><span class="detail-value">${booking.age !== null && booking.age !== undefined ? booking.age + ' лет' : '—'}</span></div>
             <div class="detail-row"><span class="detail-label">Адрес</span><span class="detail-value">${escapeHtml(booking.address) || "—"}</span></div>
             <div class="detail-row"><span class="detail-label">Источник</span><span class="detail-value">${escapeHtml(booking.referral_source) || "—"}</span></div>
             <div class="detail-row"><span class="detail-label">Тип тату</span><span class="detail-value">${escapeHtml(booking.tattoo_type) || "—"}</span></div>

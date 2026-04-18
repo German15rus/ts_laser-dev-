@@ -40,4 +40,14 @@ public static class InputCleaner
         var lowered = (value ?? string.Empty).Trim().ToLowerInvariant();
         return lowered is "нет" or "no" or "none" or "-";
     }
+
+    public static int? CalculateAge(DateOnly? birthDate)
+    {
+        if (birthDate is null) return null;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var age = today.Year - birthDate.Value.Year;
+        if (birthDate.Value.AddYears(age) > today)
+            age--;
+        return age;
+    }
 }

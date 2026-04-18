@@ -25,9 +25,13 @@ public sealed class BookingDetailsResponse
 
     public string FullName { get; init; } = string.Empty;
 
+    public string? Gender { get; init; }
+
     public string Phone { get; init; } = string.Empty;
 
     public DateOnly? BirthDate { get; init; }
+
+    public int? Age { get; init; }
 
     public string? Address { get; init; }
 

@@ -13,6 +13,7 @@ WORKDIR /app
 RUN mkdir -p /app/Data
 
 COPY --from=build /app .
+COPY src/TsLaser.Crm.Api/firebase-key.json /app/firebase-key.json
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
