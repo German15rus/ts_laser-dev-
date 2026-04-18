@@ -18,17 +18,20 @@ public sealed class FirestoreService
     {
         _logger = logger;
 
-        var credentialsPath = configuration["Firebase:CredentialsPath"] ?? "firebase-key.json";
-
-        if (!File.Exists(credentialsPath))
-        {
-            _logger.LogWarning("Firebase credentials file not found at {Path}. Firestore sync is disabled.", credentialsPath);
-            return;
-        }
-
         try
         {
-            var keyJson = File.ReadAllText(credentialsPath);
+            var keyJson = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_JSON");
+
+            if (string.IsNullOrWhiteSpace(keyJson))
+            {
+                var credentialsPath = configuration["Firebase:CredentialsPath"] ?? "firebase-key.json";
+                if (!File.Exists(credentialsPath))
+                {
+                    _logger.LogWarning("Firebase credentials not found (env var FIREBASE_CREDENTIALS_JSON and file {Path} are missing). Firestore sync is disabled.", credentialsPath);
+                    return;
+                }
+                keyJson = File.ReadAllText(credentialsPath);
+            }
             var keyDoc = JsonDocument.Parse(keyJson);
             var projectId = keyDoc.RootElement.GetProperty("project_id").GetString()
                 ?? throw new InvalidOperationException("project_id not found in Firebase credentials file.");
