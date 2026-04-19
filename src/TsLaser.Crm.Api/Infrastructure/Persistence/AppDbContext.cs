@@ -16,6 +16,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<IntakeSubmission> IntakeSubmissions => Set<IntakeSubmission>();
 
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+
     public override int SaveChanges()
     {
         ApplyTimestamps();
@@ -169,6 +171,27 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .WithMany(x => x.IntakeSubmissions)
                 .HasForeignKey(x => x.TattooId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Appointment>(entity =>
+        {
+            entity.ToTable("appointments");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.IntakeSubmissionId).HasColumnName("intake_submission_id").IsRequired();
+            entity.Property(x => x.MasterName).HasMaxLength(255).HasColumnName("master_name").IsRequired();
+            entity.Property(x => x.StartTime).HasColumnName("start_time").IsRequired();
+            entity.Property(x => x.DurationMinutes).HasColumnName("duration_minutes").IsRequired();
+            entity.Property(x => x.AppointmentStatus).HasMaxLength(20).HasColumnName("appointment_status").HasDefaultValue("waiting");
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+            entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            entity.HasIndex(x => x.IntakeSubmissionId).IsUnique().HasDatabaseName("ix_appointments_intake_submission_id");
+            entity.HasIndex(x => x.StartTime).HasDatabaseName("ix_appointments_start_time");
+
+            entity
+                .HasOne(x => x.IntakeSubmission)
+                .WithMany()
+                .HasForeignKey(x => x.IntakeSubmissionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

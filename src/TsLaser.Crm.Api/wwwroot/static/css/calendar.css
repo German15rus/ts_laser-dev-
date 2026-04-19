@@ -1,0 +1,265 @@
+/* TS Laser CRM - Calendar Styles */
+
+.cal-week-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Calendar wrapper with horizontal scroll for small screens */
+.cal-wrapper {
+  background: var(--color-surface);
+  border: var(--border-thick);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hard);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Grid: time column + 7 day columns */
+.cal-grid {
+  display: grid;
+  grid-template-columns: 60px repeat(7, minmax(130px, 1fr));
+  min-width: 1000px;
+}
+
+/* ── Header row ── */
+.cal-header-cell {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+  padding: 12px 6px;
+  border-bottom: var(--border-thick);
+  line-height: 1.4;
+  user-select: none;
+}
+
+.cal-header-cell.cal-day-off {
+  background: #f3f4f6;
+  color: var(--color-text-muted);
+}
+
+.cal-header-cell.cal-day-work {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.cal-header-cell.cal-today {
+  background: #FFF3E0;
+  color: var(--color-accent);
+}
+
+.cal-header-day {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: inherit;
+}
+
+.cal-header-date {
+  font-size: 20px;
+  font-weight: 800;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── Time label column ── */
+.cal-time-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: right;
+  padding: 8px 8px 0 0;
+  border-right: var(--border-thick);
+  background: var(--color-bg);
+  user-select: none;
+  line-height: 1;
+}
+
+/* ── Regular cells ── */
+.cal-cell {
+  min-height: 64px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  padding: 4px;
+  position: relative;
+  vertical-align: top;
+}
+
+/* First column (time labels) — right border is thick */
+.cal-cell:nth-child(8n+2) {
+  border-left: none;
+}
+
+/* Non-working day cells */
+.cal-cell.cal-cell-off {
+  background: repeating-linear-gradient(
+    135deg,
+    #f3f4f6,
+    #f3f4f6 4px,
+    #e9eaec 4px,
+    #e9eaec 8px
+  );
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Working day cells */
+.cal-cell.cal-cell-work {
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cal-cell.cal-cell-work:hover {
+  background: #FFF3E0;
+}
+
+/* ── Appointment card inside a cell ── */
+.cal-appointments {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.cal-appt-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 4px;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid #000;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: 1px 1px 0 #000;
+}
+
+.cal-appt-row:hover {
+  background: #fffbf5;
+  box-shadow: 2px 2px 0 #000;
+  transform: translate(-1px, -1px);
+}
+
+.cal-appt-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-appt-service {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-appt-master {
+  color: var(--color-text-muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+/* ── Appointment status badges ── */
+.cal-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cal-badge-waiting {
+  background: #FEF9C3;
+  color: #854D0E;
+}
+
+.cal-badge-in_progress {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.cal-badge-completed {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* ── End-time preview & error in modals ── */
+.cal-endtime-preview {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.cal-error {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-danger);
+  font-weight: 600;
+  padding: 6px 10px;
+  background: #FEE2E2;
+  border-radius: 8px;
+  border: 1px solid var(--color-danger);
+}
+
+/* ── Read-only field in edit modal ── */
+.cal-readonly-field {
+  padding: 10px 14px;
+  background: #f9fafb;
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+/* ── Utilities ── */
+.hidden {
+  display: none !important;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.mb-4 {
+  margin-bottom: 24px;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.gap-3 {
+  gap: 12px;
+}

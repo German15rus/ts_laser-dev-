@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Календарь - TS Laser CRM</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=2">
+    <link rel="stylesheet" href="/static/css/calendar.css?v=1">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <img src="/static/logo.png" alt="TS Laser" class="logo-img">
+            </a>
+            <div class="flex gap-2">
+                <a href="/" class="btn btn-secondary btn-sm">К CRM</a>
+                <a href="/bookings" class="btn btn-secondary btn-sm">Заявки</a>
+                <button class="btn btn-secondary btn-sm" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <h1>Календарь записей</h1>
+            <div class="flex gap-2">
+                <button class="btn btn-secondary btn-sm" onclick="prevWeek()">← Назад</button>
+                <button class="btn btn-secondary btn-sm" onclick="goToday()">Сегодня</button>
+                <button class="btn btn-secondary btn-sm" onclick="nextWeek()">Вперёд →</button>
+            </div>
+        </div>
+
+        <div class="cal-week-label" id="cal-week-label"></div>
+
+        <div class="cal-wrapper">
+            <div class="cal-grid" id="cal-grid">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Create Appointment Modal -->
+    <div id="modal-create" class="modal-overlay hidden" onclick="closeCreateModal(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Новая запись</h3>
+                <button class="modal-close" onclick="closeCreateModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="create-datetime">Дата и время начала</label>
+                    <input type="datetime-local" id="create-datetime" class="input" oninput="onCreateTimeChange()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="create-client">Клиент</label>
+                    <select id="create-client" class="select">
+                        <option value="">Загрузка...</option>
+                    </select>
+                    <div id="create-no-clients" class="form-hint hidden" style="color: var(--color-danger);">
+                        Нет подтверждённых клиентов без записи
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="create-master">Мастер</label>
+                    <input type="text" id="create-master" class="input" placeholder="Имя мастера">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Длительность сеанса</label>
+                    <div class="flex gap-2 items-center">
+                        <div style="flex: 1;">
+                            <input type="number" id="create-hours" class="input" min="0" max="10" placeholder="Ч" oninput="onCreateTimeChange()">
+                            <div class="form-hint">Часы (0–10)</div>
+                        </div>
+                        <span style="font-size: 20px; font-weight: 700; padding-top: 4px;">:</span>
+                        <div style="flex: 1;">
+                            <input type="number" id="create-minutes" class="input" min="0" max="59" placeholder="М" oninput="onCreateTimeChange()">
+                            <div class="form-hint">Минуты (0–59)</div>
+                        </div>
+                    </div>
+                    <div id="create-endtime-preview" class="cal-endtime-preview hidden"></div>
+                    <div id="create-duration-error" class="cal-error hidden"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="closeCreateModal()">Отмена</button>
+                <button id="create-submit-btn" class="btn btn-primary btn-sm" onclick="submitCreate()">Создать запись</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Appointment Modal -->
+    <div id="modal-edit" class="modal-overlay hidden" onclick="closeEditModal(event)">
+        <div class="modal modal-lg animate-slideUp" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Редактировать запись</h3>
+                <button class="modal-close" onclick="closeEditModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Клиент</label>
+                    <div id="edit-client-info" class="cal-readonly-field"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Услуга</label>
+                    <div id="edit-service-info" class="cal-readonly-field"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-datetime">Дата и время начала</label>
+                    <input type="datetime-local" id="edit-datetime" class="input" oninput="onEditTimeChange()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-master">Мастер</label>
+                    <input type="text" id="edit-master" class="input" placeholder="Имя мастера">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Длительность сеанса</label>
+                    <div class="flex gap-2 items-center">
+                        <div style="flex: 1;">
+                            <input type="number" id="edit-hours" class="input" min="0" max="10" placeholder="Ч" oninput="onEditTimeChange()">
+                            <div class="form-hint">Часы (0–10)</div>
+                        </div>
+                        <span style="font-size: 20px; font-weight: 700; padding-top: 4px;">:</span>
+                        <div style="flex: 1;">
+                            <input type="number" id="edit-minutes" class="input" min="0" max="59" placeholder="М" oninput="onEditTimeChange()">
+                            <div class="form-hint">Минуты (0–59)</div>
+                        </div>
+                    </div>
+                    <div id="edit-endtime-preview" class="cal-endtime-preview hidden"></div>
+                    <div id="edit-duration-error" class="cal-error hidden"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-status">Статус</label>
+                    <select id="edit-status" class="select">
+                        <option value="waiting">В ожидании</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="completed">Завершен</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger btn-sm" onclick="deleteAppointment()">Удалить запись</button>
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary btn-sm" onclick="closeEditModal()">Отмена</button>
+                    <button id="edit-submit-btn" class="btn btn-primary btn-sm" onclick="submitEdit()">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/calendar.js"></script>
+</body>
+</html>
