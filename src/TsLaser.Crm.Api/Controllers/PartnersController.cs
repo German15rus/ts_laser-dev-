@@ -1,17 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 
 namespace TsLaser.Crm.Api.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/partners")]
-public sealed class PartnersController(AppDbContext dbContext) : ControllerBase
+public sealed class PartnersController(PartnerRepository partnerRepo) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<PartnerResponse>>> GetPartners(
@@ -21,22 +20,7 @@ public sealed class PartnersController(AppDbContext dbContext) : ControllerBase
         [FromQuery(Name = "sort_order")] string sortOrder = "asc",
         CancellationToken cancellationToken = default)
     {
-        IQueryable<Partner> query = dbContext.Partners.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(typeFilter))
-        {
-            query = query.Where(x => x.Type == typeFilter);
-        }
-
-        query = (sortBy.ToLowerInvariant(), sortOrder.ToLowerInvariant()) switch
-        {
-            ("created_at", "desc") => query.OrderByDescending(x => x.CreatedAt),
-            ("created_at", _) => query.OrderBy(x => x.CreatedAt),
-            (_, "desc") => query.OrderByDescending(x => x.Name),
-            _ => query.OrderBy(x => x.Name),
-        };
-
-        var items = await query.ToListAsync(cancellationToken);
+        var items = await partnerRepo.GetAllAsync(typeFilter, sortBy, sortOrder, cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -60,16 +44,14 @@ public sealed class PartnersController(AppDbContext dbContext) : ControllerBase
             Comment = request.Comment?.Trim(),
         };
 
-        dbContext.Partners.Add(partner);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        await partnerRepo.CreateAsync(partner, cancellationToken);
         return CreatedAtAction(nameof(GetPartner), new { partnerId = partner.Id }, partner.ToResponse());
     }
 
     [HttpGet("{partnerId:int}")]
     public async Task<ActionResult<PartnerResponse>> GetPartner(int partnerId, CancellationToken cancellationToken)
     {
-        var partner = await dbContext.Partners.AsNoTracking().FirstOrDefaultAsync(x => x.Id == partnerId, cancellationToken);
+        var partner = await partnerRepo.GetByIdAsync(partnerId, cancellationToken);
         if (partner is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Партнер не найден");
@@ -81,7 +63,7 @@ public sealed class PartnersController(AppDbContext dbContext) : ControllerBase
     [HttpPut("{partnerId:int}")]
     public async Task<ActionResult<PartnerResponse>> UpdatePartner(int partnerId, [FromBody] PartnerUpdateRequest request, CancellationToken cancellationToken)
     {
-        var partner = await dbContext.Partners.FirstOrDefaultAsync(x => x.Id == partnerId, cancellationToken);
+        var partner = await partnerRepo.GetByIdAsync(partnerId, cancellationToken);
         if (partner is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Партнер не найден");
@@ -97,22 +79,20 @@ public sealed class PartnersController(AppDbContext dbContext) : ControllerBase
         partner.Terms = request.Terms?.Trim();
         partner.Comment = request.Comment?.Trim();
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await partnerRepo.UpdateAsync(partner, cancellationToken);
         return Ok(partner.ToResponse());
     }
 
     [HttpDelete("{partnerId:int}")]
     public async Task<IActionResult> DeletePartner(int partnerId, CancellationToken cancellationToken)
     {
-        var partner = await dbContext.Partners.FirstOrDefaultAsync(x => x.Id == partnerId, cancellationToken);
+        var partner = await partnerRepo.GetByIdAsync(partnerId, cancellationToken);
         if (partner is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Партнер не найден");
         }
 
-        dbContext.Partners.Remove(partner);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        await partnerRepo.DeleteAsync(partnerId, cancellationToken);
         return Ok(new { success = true, message = "Партнер удален" });
     }
 }
