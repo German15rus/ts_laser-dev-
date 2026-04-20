@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -6,14 +6,13 @@ using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
 using TsLaser.Crm.Api.Domain.Enums;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
-using TsLaser.Crm.Api.Infrastructure.Services;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 
 namespace TsLaser.Crm.Api.Controllers;
 
 [ApiController]
 [Route("api/public")]
-public sealed class PublicController(AppDbContext dbContext, FirestoreService firestoreService) : ControllerBase
+public sealed class PublicController(IntakeSubmissionRepository submissionRepo) : ControllerBase
 {
     [AllowAnonymous]
     [EnableRateLimiting("booking")]
@@ -91,10 +90,7 @@ public sealed class PublicController(AppDbContext dbContext, FirestoreService fi
             RawPayload = JsonSerializer.Serialize(payloadDict),
         };
 
-        dbContext.IntakeSubmissions.Add(submission);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await firestoreService.SaveSubmissionAsync(submission, cancellationToken);
+        await submissionRepo.CreateAsync(submission, cancellationToken);
 
         return Ok(new PublicBookingResponse(true, "Booking request saved", submission.Id));
     }

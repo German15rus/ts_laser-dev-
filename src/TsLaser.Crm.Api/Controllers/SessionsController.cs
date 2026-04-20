@@ -1,16 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 
 namespace TsLaser.Crm.Api.Controllers;
 
 [Authorize]
 [ApiController]
-public sealed class SessionsController(AppDbContext dbContext) : ControllerBase
+public sealed class SessionsController(ClientRepository clientRepo, LaserSessionRepository sessionRepo) : ControllerBase
 {
     [HttpGet("api/clients/{clientId:int}/sessions")]
     public async Task<ActionResult<LaserSessionsListResponse>> GetClientSessions(
@@ -20,30 +19,13 @@ public sealed class SessionsController(AppDbContext dbContext) : ControllerBase
         [FromQuery(Name = "sort_order")] string sortOrder = "asc",
         CancellationToken cancellationToken = default)
     {
-        var client = await dbContext.Clients.AsNoTracking().FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+        var client = await clientRepo.GetByIdAsync(clientId, cancellationToken);
         if (client is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
         }
 
-        IQueryable<LaserSession> query = dbContext.LaserSessions.AsNoTracking().Where(x => x.ClientId == clientId);
-
-        if (!string.IsNullOrWhiteSpace(tattooFilter))
-        {
-            query = query.Where(x => x.TattooName == tattooFilter);
-        }
-
-        query = (sortBy.ToLowerInvariant(), sortOrder.ToLowerInvariant()) switch
-        {
-            ("tattoo_name", "desc") => query.OrderByDescending(x => x.TattooName),
-            ("tattoo_name", _) => query.OrderBy(x => x.TattooName),
-            ("session_number", "desc") => query.OrderByDescending(x => x.SessionNumber),
-            ("session_number", _) => query.OrderBy(x => x.SessionNumber),
-            (_, "desc") => query.OrderByDescending(x => x.SessionDate),
-            _ => query.OrderBy(x => x.SessionDate),
-        };
-
-        var sessions = await query.ToListAsync(cancellationToken);
+        var sessions = await sessionRepo.GetByClientIdAsync(clientId, tattooFilter, sortBy, sortOrder, cancellationToken);
         var totalFlashes = sessions.Sum(x => x.FlashesCount ?? 0);
 
         return Ok(new LaserSessionsListResponse
@@ -58,7 +40,7 @@ public sealed class SessionsController(AppDbContext dbContext) : ControllerBase
     [HttpPost("api/clients/{clientId:int}/sessions")]
     public async Task<ActionResult<LaserSessionResponse>> CreateSession(int clientId, [FromBody] LaserSessionCreateRequest request, CancellationToken cancellationToken)
     {
-        var clientExists = await dbContext.Clients.AnyAsync(x => x.Id == clientId, cancellationToken);
+        var clientExists = await clientRepo.ExistsAsync(clientId, cancellationToken);
         if (!clientExists)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
@@ -81,16 +63,14 @@ public sealed class SessionsController(AppDbContext dbContext) : ControllerBase
             Comment = request.Comment,
         };
 
-        dbContext.LaserSessions.Add(session);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        await sessionRepo.CreateAsync(session, cancellationToken);
         return CreatedAtAction(nameof(GetSession), new { sessionId = session.Id }, session.ToResponse());
     }
 
     [HttpGet("api/sessions/{sessionId:int}")]
     public async Task<ActionResult<LaserSessionResponse>> GetSession(int sessionId, CancellationToken cancellationToken)
     {
-        var session = await dbContext.LaserSessions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
+        var session = await sessionRepo.GetByIdAsync(sessionId, cancellationToken);
         if (session is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Сеанс не найден");
@@ -102,7 +82,7 @@ public sealed class SessionsController(AppDbContext dbContext) : ControllerBase
     [HttpPut("api/sessions/{sessionId:int}")]
     public async Task<ActionResult<LaserSessionResponse>> UpdateSession(int sessionId, [FromBody] LaserSessionUpdateRequest request, CancellationToken cancellationToken)
     {
-        var session = await dbContext.LaserSessions.FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
+        var session = await sessionRepo.GetByIdAsync(sessionId, cancellationToken);
         if (session is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Сеанс не найден");
@@ -121,23 +101,20 @@ public sealed class SessionsController(AppDbContext dbContext) : ControllerBase
         session.BreakPeriod = request.BreakPeriod;
         session.Comment = request.Comment;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        await sessionRepo.UpdateAsync(session, cancellationToken);
         return Ok(session.ToResponse());
     }
 
     [HttpDelete("api/sessions/{sessionId:int}")]
     public async Task<IActionResult> DeleteSession(int sessionId, CancellationToken cancellationToken)
     {
-        var session = await dbContext.LaserSessions.FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
+        var session = await sessionRepo.GetByIdAsync(sessionId, cancellationToken);
         if (session is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Сеанс не найден");
         }
 
-        dbContext.LaserSessions.Remove(session);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        await sessionRepo.DeleteAsync(sessionId, cancellationToken);
         return Ok(new { success = true, message = "Сеанс удален" });
     }
 }

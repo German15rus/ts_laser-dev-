@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 using TsLaser.Crm.Api.Infrastructure.Services;
 
 namespace TsLaser.Crm.Api.Controllers;
@@ -10,13 +9,18 @@ namespace TsLaser.Crm.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api")]
-public sealed class ExportController(AppDbContext dbContext, ExportService exportService) : ControllerBase
+public sealed class ExportController(
+    ClientRepository clientRepo,
+    PartnerRepository partnerRepo,
+    LaserSessionRepository sessionRepo,
+    TattooRepository tattooRepo,
+    ExportService exportService) : ControllerBase
 {
     [HttpGet("export/clients")]
     public async Task<IActionResult> ExportClients([FromQuery] string format = "csv", CancellationToken cancellationToken = default)
     {
-        var clients = await dbContext.Clients.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
-        var partners = await dbContext.Partners.AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.Name, cancellationToken);
+        var clients = await clientRepo.GetAllAsync(null, null, "name", "asc", cancellationToken);
+        var partners = await partnerRepo.GetNameMapAsync(cancellationToken);
 
         string[] headers =
         [
@@ -69,7 +73,7 @@ public sealed class ExportController(AppDbContext dbContext, ExportService expor
     [HttpGet("export/partners")]
     public async Task<IActionResult> ExportPartners([FromQuery] string format = "csv", CancellationToken cancellationToken = default)
     {
-        var partners = await dbContext.Partners.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        var partners = await partnerRepo.GetAllAsync(null, "name", "asc", cancellationToken);
 
         string[] headers =
         [
@@ -101,22 +105,14 @@ public sealed class ExportController(AppDbContext dbContext, ExportService expor
     [HttpGet("clients/{clientId:int}/export/sessions")]
     public async Task<IActionResult> ExportSessions(int clientId, [FromQuery] string format = "csv", CancellationToken cancellationToken = default)
     {
-        var client = await dbContext.Clients.AsNoTracking().FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+        var client = await clientRepo.GetByIdAsync(clientId, cancellationToken);
         if (client is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
         }
 
-        var sessions = await dbContext.LaserSessions
-            .AsNoTracking()
-            .Where(x => x.ClientId == clientId)
-            .OrderBy(x => x.SessionDate)
-            .ToListAsync(cancellationToken);
-
-        var tattoos = await dbContext.Tattoos
-            .AsNoTracking()
-            .Where(x => x.ClientId == clientId)
-            .ToDictionaryAsync(x => x.Id, x => x.Name, cancellationToken);
+        var sessions = await sessionRepo.GetByClientIdRawAsync(clientId, cancellationToken);
+        var tattoos = await tattooRepo.GetNameMapByClientIdAsync(clientId, cancellationToken);
 
         string[] headers =
         [
@@ -173,17 +169,13 @@ public sealed class ExportController(AppDbContext dbContext, ExportService expor
     [HttpGet("clients/{clientId:int}/export/tattoos")]
     public async Task<IActionResult> ExportTattoos(int clientId, [FromQuery] string format = "csv", CancellationToken cancellationToken = default)
     {
-        var client = await dbContext.Clients.AsNoTracking().FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
+        var client = await clientRepo.GetByIdAsync(clientId, cancellationToken);
         if (client is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Клиент не найден");
         }
 
-        var tattoos = await dbContext.Tattoos
-            .AsNoTracking()
-            .Where(x => x.ClientId == clientId)
-            .OrderBy(x => x.Name)
-            .ToListAsync(cancellationToken);
+        var tattoos = await tattooRepo.GetByClientIdAsync(clientId, cancellationToken);
 
         string[] headers =
         [

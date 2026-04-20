@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Enums;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 using TsLaser.Crm.Api.Infrastructure.Services;
 
 namespace TsLaser.Crm.Api.Controllers;
@@ -13,7 +12,7 @@ namespace TsLaser.Crm.Api.Controllers;
 [ApiController]
 [Route("api/bookings")]
 public sealed class BookingsController(
-    AppDbContext dbContext,
+    IntakeSubmissionRepository submissionRepo,
     BookingModerationService moderationService) : ControllerBase
 {
     [HttpGet]
@@ -22,22 +21,14 @@ public sealed class BookingsController(
         CancellationToken cancellationToken = default)
     {
         var normalizedStatus = NormalizeStatusFilter(status);
-
-        var query = dbContext.IntakeSubmissions
-            .AsNoTracking()
-            .Where(x => x.Status == normalizedStatus)
-            .OrderByDescending(x => x.CreatedAt);
-
-        var items = await query.ToListAsync(cancellationToken);
+        var items = await submissionRepo.GetByStatusAsync(normalizedStatus, cancellationToken);
         return Ok(items.Select(x => x.ToListResponse()).ToList());
     }
 
     [HttpGet("{submissionId:int}")]
     public async Task<ActionResult<BookingDetailsResponse>> GetBooking(int submissionId, CancellationToken cancellationToken)
     {
-        var submission = await dbContext.IntakeSubmissions.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == submissionId, cancellationToken);
-
+        var submission = await submissionRepo.GetByIdAsync(submissionId, cancellationToken);
         if (submission is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Заявка не найдена");

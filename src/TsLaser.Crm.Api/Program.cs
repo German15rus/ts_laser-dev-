@@ -1,10 +1,12 @@
-﻿using System.Text.Json;
+using System.Text.Json;
+using Google.Apis.Auth.OAuth2;
+using Google.Cloud.Firestore;
+using Google.Cloud.Firestore.V1;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 using TsLaser.Crm.Api.Infrastructure.Security;
 using TsLaser.Crm.Api.Infrastructure.Services;
 using TsLaser.Crm.Api.Middleware;
@@ -100,13 +102,50 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Firestore
+builder.Services.AddSingleton<FirestoreDb>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<FirestoreDb>>();
 
-builder.Services.AddScoped<DbInitializer>();
-builder.Services.AddScoped<LegacyImportService>();
+    var keyJson = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_JSON");
+
+    if (string.IsNullOrWhiteSpace(keyJson))
+    {
+        var credentialsPath = config["Firebase:CredentialsPath"] ?? "firebase-key.json";
+        if (!File.Exists(credentialsPath))
+        {
+            throw new InvalidOperationException(
+                $"Firebase credentials not found. Set FIREBASE_CREDENTIALS_JSON env var or provide file at '{credentialsPath}'.");
+        }
+        keyJson = File.ReadAllText(credentialsPath);
+    }
+
+    var keyDoc = JsonDocument.Parse(keyJson);
+    var projectId = keyDoc.RootElement.GetProperty("project_id").GetString()
+        ?? throw new InvalidOperationException("project_id not found in Firebase credentials.");
+
+    using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(keyJson));
+    var credential = GoogleCredential.FromStream(stream);
+    var client = new FirestoreClientBuilder { Credential = credential }.Build();
+    var db = FirestoreDb.Create(projectId, client);
+
+    logger.LogInformation("Firestore initialized for project {ProjectId}.", projectId);
+    return db;
+});
+
+// Repositories
+builder.Services.AddSingleton<FirestoreCounterRepository>();
+builder.Services.AddSingleton<PartnerRepository>();
+builder.Services.AddSingleton<ClientRepository>();
+builder.Services.AddSingleton<TattooRepository>();
+builder.Services.AddSingleton<LaserSessionRepository>();
+builder.Services.AddSingleton<IntakeSubmissionRepository>();
+builder.Services.AddSingleton<AppointmentRepository>();
+
+// Services
 builder.Services.AddScoped<BookingModerationService>();
-builder.Services.AddSingleton<FirestoreService>();
+builder.Services.AddScoped<FirebaseMigrationService>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<TemplateService>();
 builder.Services.AddSingleton<ExportService>();
@@ -131,71 +170,51 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-string? importPath = null;
+// CLI: --migrate-to-firebase [path-to-tslaser.db]
+string? migratePath = null;
 for (var i = 0; i < args.Length; i++)
 {
-    if (args[i].Equals("--import-legacy", StringComparison.OrdinalIgnoreCase))
+    if (args[i].Equals("--migrate-to-firebase", StringComparison.OrdinalIgnoreCase))
     {
-        if (i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
-        {
-            importPath = ResolveLegacyPath(args[i + 1]);
-        }
-        else
-        {
-            importPath = ResolveLegacyPath("legacy_python_backend/tslaser.db");
-        }
-
+        migratePath = i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal)
+            ? ResolvePath(args[i + 1])
+            : ResolvePath("Data/tslaser.db");
         break;
     }
 }
 
-using (var scope = app.Services.CreateScope())
+if (!string.IsNullOrWhiteSpace(migratePath))
 {
-    var initializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await initializer.InitializeAsync();
-}
-
-if (!string.IsNullOrWhiteSpace(importPath))
-{
-    if (!File.Exists(importPath))
+    if (!File.Exists(migratePath))
     {
         throw new FileNotFoundException(
-            "Legacy database file was not found. Expected tslaser.db. Pass explicit path: --import-legacy <path-to-tslaser.db>",
-            importPath);
+            "SQLite database file not found. Pass explicit path: --migrate-to-firebase <path-to-tslaser.db>",
+            migratePath);
     }
 
-    Log.Information("Resolved legacy import path: {ImportPath}", importPath);
+    Log.Information("Migrating from SQLite: {Path}", migratePath);
 
-    using var importScope = app.Services.CreateScope();
-    var importer = importScope.ServiceProvider.GetRequiredService<LegacyImportService>();
-    await importer.ImportAsync(importPath);
+    using var migrationScope = app.Services.CreateScope();
+    var migrationService = migrationScope.ServiceProvider.GetRequiredService<FirebaseMigrationService>();
+    await migrationService.MigrateAsync(migratePath);
+    Log.Information("Migration complete. You can now start the app without --migrate-to-firebase.");
     return;
 }
 
 await app.RunAsync();
 
-static string ResolveLegacyPath(string rawPath)
+static string ResolvePath(string rawPath)
 {
-    if (string.IsNullOrWhiteSpace(rawPath))
-    {
-        return rawPath;
-    }
-
-    if (Path.IsPathRooted(rawPath))
-    {
-        return Path.GetFullPath(rawPath);
-    }
+    if (string.IsNullOrWhiteSpace(rawPath)) return rawPath;
+    if (Path.IsPathRooted(rawPath)) return Path.GetFullPath(rawPath);
 
     var cwd = Directory.GetCurrentDirectory();
-
     var candidates = new[]
     {
         Path.GetFullPath(Path.Combine(cwd, rawPath)),
         Path.GetFullPath(Path.Combine(cwd, "..", rawPath)),
         Path.GetFullPath(Path.Combine(cwd, "..", "..", rawPath)),
-        Path.GetFullPath(Path.Combine(cwd, "..", "..", "..", rawPath)),
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, rawPath)),
     };
-
     return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
 }

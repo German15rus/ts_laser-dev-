@@ -1,16 +1,18 @@
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Domain.Entities;
 using TsLaser.Crm.Api.Domain.Enums;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 
 namespace TsLaser.Crm.Api.Infrastructure.Services;
 
-public sealed class BookingModerationService(AppDbContext dbContext, FirestoreService firestoreService)
+public sealed class BookingModerationService(
+    ClientRepository clientRepo,
+    TattooRepository tattooRepo,
+    IntakeSubmissionRepository submissionRepo)
 {
     public async Task<IntakeSubmission> ApproveAsync(int submissionId, string reviewer, CancellationToken cancellationToken = default)
     {
-        var submission = await dbContext.IntakeSubmissions.FirstOrDefaultAsync(x => x.Id == submissionId, cancellationToken);
+        var submission = await submissionRepo.GetByIdAsync(submissionId, cancellationToken);
         if (submission is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Заявка не найдена");
@@ -28,9 +30,7 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
         var previousRemovalWhere = InputCleaner.CleanRequired(submission.PreviousRemovalWhere, 500);
         var desiredResult = InputCleaner.CleanRequired(submission.DesiredResult, 500);
 
-        await using var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-        var client = await dbContext.Clients.FirstOrDefaultAsync(x => x.Phone == normalizedPhone, cancellationToken);
+        var client = await clientRepo.GetByPhoneAsync(normalizedPhone, cancellationToken);
         var isNewClient = client is null;
 
         if (client is null)
@@ -45,37 +45,44 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
                 ReferralCustom = referralSource,
                 Status = "active",
             };
-
-            dbContext.Clients.Add(client);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await clientRepo.CreateAsync(client, cancellationToken);
         }
         else
         {
+            var changed = false;
+
             if (InputCleaner.IsNotFilled(client.Name))
             {
                 client.Name = fullName;
+                changed = true;
             }
 
             if (client.BirthDate is null && submission.BirthDate is not null)
             {
                 client.BirthDate = submission.BirthDate;
                 client.Age = InputCleaner.CalculateAge(submission.BirthDate);
+                changed = true;
             }
 
             if (InputCleaner.IsNotFilled(client.Address))
             {
                 client.Address = address;
+                changed = true;
             }
 
             if (InputCleaner.IsNotFilled(client.ReferralCustom))
             {
                 client.ReferralCustom = referralSource;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await clientRepo.UpdateAsync(client, cancellationToken);
             }
         }
 
-        var tattoo = await dbContext.Tattoos.FirstOrDefaultAsync(
-            x => x.ClientId == client.Id && x.Name == tattooType,
-            cancellationToken);
+        var tattoo = await tattooRepo.GetByClientIdAndNameAsync(client.Id, tattooType, cancellationToken);
 
         if (tattoo is null)
         {
@@ -88,25 +95,33 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
                 PreviousRemovalPlace = previousRemovalWhere,
                 DesiredResult = desiredResult,
             };
-
-            dbContext.Tattoos.Add(tattoo);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await tattooRepo.CreateAsync(tattoo, cancellationToken);
         }
         else
         {
+            var changed = false;
+
             if (InputCleaner.IsNotFilled(tattoo.CorrectionsCount))
             {
                 tattoo.CorrectionsCount = correctionsInfo;
+                changed = true;
             }
 
             if (InputCleaner.IsNotFilled(tattoo.PreviousRemovalPlace))
             {
                 tattoo.PreviousRemovalPlace = previousRemovalWhere;
+                changed = true;
             }
 
             if (InputCleaner.IsNotFilled(tattoo.DesiredResult))
             {
                 tattoo.DesiredResult = desiredResult;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await tattooRepo.UpdateAsync(tattoo, cancellationToken);
             }
         }
 
@@ -130,9 +145,7 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
         submission.ApprovedClientId = client.Id;
         submission.ApprovedTattooId = tattoo.Id;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
-        await firestoreService.DeleteSubmissionAsync(submission.Id, cancellationToken);
+        await submissionRepo.UpdateAsync(submission, cancellationToken);
 
         return submission;
     }
@@ -143,7 +156,7 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
         string? rejectionReason,
         CancellationToken cancellationToken = default)
     {
-        var submission = await dbContext.IntakeSubmissions.FirstOrDefaultAsync(x => x.Id == submissionId, cancellationToken);
+        var submission = await submissionRepo.GetByIdAsync(submissionId, cancellationToken);
         if (submission is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Заявка не найдена");
@@ -156,8 +169,7 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
         submission.ReviewedBy = reviewer;
         submission.RejectionReason = NormalizeRejectionReason(rejectionReason);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await firestoreService.DeleteSubmissionAsync(submission.Id, cancellationToken);
+        await submissionRepo.UpdateAsync(submission, cancellationToken);
         return submission;
     }
 
@@ -177,11 +189,7 @@ public sealed class BookingModerationService(AppDbContext dbContext, FirestoreSe
 
     private static string? NormalizeRejectionReason(string? reason)
     {
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return null;
-        }
-
+        if (string.IsNullOrWhiteSpace(reason)) return null;
         var trimmed = reason.Trim();
         return trimmed.Length <= 1000 ? trimmed : trimmed[..1000];
     }
