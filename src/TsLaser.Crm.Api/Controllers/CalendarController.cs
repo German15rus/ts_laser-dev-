@@ -130,6 +130,17 @@ public sealed class CalendarController(
         }
 
         await appointmentRepo.UpdateAsync(appointment, cancellationToken);
+
+        if (appointment.AppointmentStatus == AppointmentStatus.Completed)
+        {
+            var submission = await submissionRepo.GetByIdAsync(appointment.IntakeSubmissionId, cancellationToken);
+            if (submission != null && submission.Status != IntakeSubmissionStatus.Completed)
+            {
+                submission.Status = IntakeSubmissionStatus.Completed;
+                await submissionRepo.UpdateAsync(submission, cancellationToken);
+            }
+        }
+
         return Ok(ToResponse(appointment));
     }
 

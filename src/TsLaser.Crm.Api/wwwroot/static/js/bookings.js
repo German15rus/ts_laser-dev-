@@ -65,7 +65,8 @@ function getStatusTag(status) {
     const map = {
         pending: { label: "Новая", className: "tag-active" },
         approved: { label: "Одобрена", className: "tag-completed" },
-        rejected: { label: "Отклонена", className: "tag-stopped" }
+        rejected: { label: "Отклонена", className: "tag-stopped" },
+        completed: { label: "Завершено", className: "tag-lost" }
     };
 
     const cfg = map[status] || { label: status || "unknown", className: "tag-lost" };

@@ -12,6 +12,9 @@ using TsLaser.Crm.Api.Infrastructure.Services;
 using TsLaser.Crm.Api.Middleware;
 using TsLaser.Crm.Api.Options;
 
+// gRPC (Firebase) не может подключиться через локальный прокси (Clash/V2Ray на 127.0.0.1:10809)
+System.Net.Http.HttpClient.DefaultProxy = new System.Net.WebProxy();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, configuration) =>
