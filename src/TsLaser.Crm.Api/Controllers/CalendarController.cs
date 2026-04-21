@@ -1,18 +1,19 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
 using TsLaser.Crm.Api.Domain.Enums;
-using TsLaser.Crm.Api.Infrastructure.Persistence;
+using TsLaser.Crm.Api.Infrastructure.Repositories;
 
 namespace TsLaser.Crm.Api.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/calendar")]
-public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
+public sealed class CalendarController(
+    AppointmentRepository appointmentRepo,
+    IntakeSubmissionRepository submissionRepo) : ControllerBase
 {
     private static readonly int[] WorkingDays = [2, 4, 6]; // Tue, Thu, Sat
     private const int WorkDayStartHour = 10;
@@ -27,13 +28,7 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
         var fromUtc = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var toUtc = to.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc);
 
-        var appointments = await dbContext.Appointments
-            .AsNoTracking()
-            .Include(x => x.IntakeSubmission)
-            .Where(x => x.StartTime >= fromUtc && x.StartTime <= toUtc)
-            .OrderBy(x => x.StartTime)
-            .ToListAsync(cancellationToken);
-
+        var appointments = await appointmentRepo.GetByDateRangeAsync(fromUtc, toUtc, cancellationToken);
         return Ok(appointments.Select(ToResponse).ToList());
     }
 
@@ -41,25 +36,16 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
     public async Task<ActionResult<List<AvailableClientResponse>>> GetAvailableClients(
         CancellationToken cancellationToken = default)
     {
-        var scheduledIds = await dbContext.Appointments
-            .AsNoTracking()
-            .Select(x => x.IntakeSubmissionId)
-            .ToListAsync(cancellationToken);
+        var scheduledIds = await appointmentRepo.GetAllSubmissionIdsAsync(cancellationToken);
+        var clients = await submissionRepo.GetApprovedNotScheduledAsync(scheduledIds, cancellationToken);
 
-        var clients = await dbContext.IntakeSubmissions
-            .AsNoTracking()
-            .Where(x => x.Status == IntakeSubmissionStatus.Approved && !scheduledIds.Contains(x.Id))
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new AvailableClientResponse
-            {
-                SubmissionId = x.Id,
-                FullName = x.FullName,
-                TattooType = x.TattooType,
-                Phone = x.Phone,
-            })
-            .ToListAsync(cancellationToken);
-
-        return Ok(clients);
+        return Ok(clients.Select(x => new AvailableClientResponse
+        {
+            SubmissionId = x.Id,
+            FullName = x.FullName,
+            TattooType = x.TattooType,
+            Phone = x.Phone,
+        }).ToList());
     }
 
     [HttpPost("appointments")]
@@ -69,10 +55,7 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
     {
         ValidateWorkSchedule(request.StartTime, request.DurationMinutes);
 
-        var submission = await dbContext.IntakeSubmissions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == request.IntakeSubmissionId, cancellationToken);
-
+        var submission = await submissionRepo.GetByIdAsync(request.IntakeSubmissionId, cancellationToken);
         if (submission is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Анкета не найдена");
@@ -83,9 +66,7 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
             throw new ApiException(StatusCodes.Status400BadRequest, "Только подтверждённые анкеты можно записывать");
         }
 
-        var alreadyScheduled = await dbContext.Appointments
-            .AnyAsync(x => x.IntakeSubmissionId == request.IntakeSubmissionId, cancellationToken);
-
+        var alreadyScheduled = await appointmentRepo.ExistsBySubmissionIdAsync(request.IntakeSubmissionId, cancellationToken);
         if (alreadyScheduled)
         {
             throw new ApiException(StatusCodes.Status409Conflict, "Этот клиент уже записан");
@@ -103,15 +84,10 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
             StartTime = request.StartTime.ToUniversalTime(),
             DurationMinutes = request.DurationMinutes,
             AppointmentStatus = AppointmentStatus.Waiting,
+            IntakeSubmission = submission,
         };
 
-        dbContext.Appointments.Add(appointment);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        await dbContext.Entry(appointment)
-            .Reference(x => x.IntakeSubmission)
-            .LoadAsync(cancellationToken);
-
+        await appointmentRepo.CreateAsync(appointment, cancellationToken);
         return CreatedAtAction(nameof(GetAppointments), ToResponse(appointment));
     }
 
@@ -121,37 +97,22 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
         [FromBody] UpdateAppointmentRequest request,
         CancellationToken cancellationToken = default)
     {
-        var appointment = await dbContext.Appointments
-            .Include(x => x.IntakeSubmission)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-
+        var appointment = await appointmentRepo.GetByIdAsync(id, cancellationToken);
         if (appointment is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Запись не найдена");
         }
 
-        var newStartTime = request.StartTime.HasValue
-            ? request.StartTime.Value
-            : appointment.StartTime;
-
-        var newDuration = request.DurationMinutes.HasValue
-            ? request.DurationMinutes.Value
-            : appointment.DurationMinutes;
+        var newStartTime = request.StartTime.HasValue ? request.StartTime.Value : appointment.StartTime;
+        var newDuration = request.DurationMinutes.HasValue ? request.DurationMinutes.Value : appointment.DurationMinutes;
 
         if (request.StartTime.HasValue || request.DurationMinutes.HasValue)
         {
             ValidateWorkSchedule(newStartTime, newDuration);
         }
 
-        if (request.StartTime.HasValue)
-        {
-            appointment.StartTime = request.StartTime.Value.ToUniversalTime();
-        }
-
-        if (request.DurationMinutes.HasValue)
-        {
-            appointment.DurationMinutes = request.DurationMinutes.Value;
-        }
+        if (request.StartTime.HasValue) appointment.StartTime = request.StartTime.Value.ToUniversalTime();
+        if (request.DurationMinutes.HasValue) appointment.DurationMinutes = request.DurationMinutes.Value;
 
         if (!string.IsNullOrWhiteSpace(request.MasterName))
         {
@@ -168,7 +129,17 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
             appointment.AppointmentStatus = AppointmentStatus.Normalize(request.AppointmentStatus);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await appointmentRepo.UpdateAsync(appointment, cancellationToken);
+
+        if (appointment.AppointmentStatus == AppointmentStatus.Completed)
+        {
+            var submission = await submissionRepo.GetByIdAsync(appointment.IntakeSubmissionId, cancellationToken);
+            if (submission != null && submission.Status != IntakeSubmissionStatus.Completed)
+            {
+                submission.Status = IntakeSubmissionStatus.Completed;
+                await submissionRepo.UpdateAsync(submission, cancellationToken);
+            }
+        }
 
         return Ok(ToResponse(appointment));
     }
@@ -176,36 +147,28 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
     [HttpDelete("appointments/{id:int}")]
     public async Task<IActionResult> DeleteAppointment(int id, CancellationToken cancellationToken = default)
     {
-        var appointment = await dbContext.Appointments
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-
+        var appointment = await appointmentRepo.GetByIdAsync(id, cancellationToken);
         if (appointment is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Запись не найдена");
         }
 
-        dbContext.Appointments.Remove(appointment);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
+        await appointmentRepo.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
 
     private static void ValidateWorkSchedule(DateTime startTime, int durationMinutes)
     {
-        var localTime = startTime.Kind == DateTimeKind.Utc
-            ? startTime.ToLocalTime()
-            : startTime;
+        var localTime = startTime.Kind == DateTimeKind.Utc ? startTime.ToLocalTime() : startTime;
 
         if (!WorkingDays.Contains((int)localTime.DayOfWeek))
         {
-            throw new ApiException(StatusCodes.Status400BadRequest,
-                "Рабочие дни: Вторник, Четверг, Суббота");
+            throw new ApiException(StatusCodes.Status400BadRequest, "Рабочие дни: Вторник, Четверг, Суббота");
         }
 
         if (localTime.Hour < WorkDayStartHour)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest,
-                $"Рабочее время с {WorkDayStartHour}:00 до {WorkDayEndHour}:00");
+            throw new ApiException(StatusCodes.Status400BadRequest, $"Рабочее время с {WorkDayStartHour}:00 до {WorkDayEndHour}:00");
         }
 
         var endTime = localTime.AddMinutes(durationMinutes);
@@ -219,8 +182,7 @@ public sealed class CalendarController(AppDbContext dbContext) : ControllerBase
 
         if (durationMinutes < 1 || durationMinutes > 659)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest,
-                "Длительность: от 1 до 659 минут (до 10 ч 59 мин)");
+            throw new ApiException(StatusCodes.Status400BadRequest, "Длительность: от 1 до 659 минут (до 10 ч 59 мин)");
         }
     }
 
