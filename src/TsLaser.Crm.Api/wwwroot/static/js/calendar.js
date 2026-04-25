@@ -6,7 +6,7 @@
 const WORKING_DAYS = [2, 4, 6]; // Tue=2, Thu=4, Sat=6
 const WORK_START = 10;
 const WORK_END = 20;
-const HOURS = Array.from({ length: WORK_END - WORK_START }, (_, i) => WORK_START + i);
+const HOURS = Array.from({ length: WORK_END - WORK_START + 1 }, (_, i) => WORK_START + i);
 const DAY_NAMES = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
@@ -16,6 +16,8 @@ const STATUS_LABELS = {
     completed: 'Завершен',
 };
 
+const DAY_FULL_NAMES = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+
 // ── State ──────────────────────────────────────────────────────────────────
 let currentWeekStart = getMonday(new Date());
 let appointments = [];
@@ -23,6 +25,7 @@ let availableClients = [];
 let editingAppointmentId = null;
 let createTargetDate = null;
 let createTargetHour = null;
+let currentView = 'calendar';
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,7 +69,11 @@ async function loadWeek() {
         appointments = [];
     }
 
-    renderGrid();
+    if (currentView === 'calendar') {
+        renderGrid();
+    } else {
+        renderSchedule();
+    }
     updateWeekLabel();
 }
 
@@ -117,10 +124,12 @@ function renderGrid() {
                 if (cellAppts.length > 0) {
                     cell.appendChild(buildAppointmentsList(cellAppts));
                 }
-                cell.addEventListener('click', (e) => {
-                    if (e.target.closest('.cal-appt-row')) return;
-                    openCreateModal(day, hour);
-                });
+                if (hour < WORK_END) {
+                    cell.addEventListener('click', (e) => {
+                        if (e.target.closest('.cal-appt-row')) return;
+                        openCreateModal(day, hour);
+                    });
+                }
             }
 
             grid.appendChild(cell);
@@ -134,7 +143,7 @@ function buildAppointmentsList(appts) {
 
     appts.forEach(appt => {
         const row = document.createElement('div');
-        row.className = 'cal-appt-row';
+        row.className = 'cal-appt-row' + (appt.appointment_status === 'completed' ? ' cal-appt-row--completed' : '');
         row.title = `${appt.client_name} | ${appt.service || '—'} | до ${formatTime(appt.end_time)} | ${appt.master_name}`;
 
         const badgeClass = `cal-badge-${appt.appointment_status}`;
@@ -300,6 +309,13 @@ function openEditModal(appt) {
 
     onEditTimeChange();
 
+    const isCompleted = appt.appointment_status === 'completed';
+    ['edit-datetime', 'edit-master', 'edit-hours', 'edit-minutes', 'edit-status'].forEach(id => {
+        document.getElementById(id).disabled = isCompleted;
+    });
+    document.getElementById('edit-delete-btn').classList.toggle('hidden', isCompleted);
+    document.getElementById('edit-submit-btn').classList.toggle('hidden', isCompleted);
+
     document.getElementById('modal-edit').classList.remove('hidden');
 }
 
@@ -421,6 +437,79 @@ function validateDurationPreview(prefix) {
         errorEl.classList.add('hidden');
         submitBtn.disabled = false;
     }
+}
+
+// ── View switch ────────────────────────────────────────────────────────────
+function switchView(view) {
+    currentView = view;
+
+    const wrapper = document.getElementById('cal-wrapper');
+    const scheduleEl = document.getElementById('cal-schedule');
+    const btnCal = document.getElementById('btn-view-calendar');
+    const btnSch = document.getElementById('btn-view-schedule');
+
+    if (view === 'calendar') {
+        wrapper.classList.remove('hidden');
+        scheduleEl.classList.add('hidden');
+        btnCal.classList.add('cal-view-btn-active');
+        btnSch.classList.remove('cal-view-btn-active');
+        renderGrid();
+    } else {
+        wrapper.classList.add('hidden');
+        scheduleEl.classList.remove('hidden');
+        btnCal.classList.remove('cal-view-btn-active');
+        btnSch.classList.add('cal-view-btn-active');
+        renderSchedule();
+    }
+}
+
+function renderSchedule() {
+    const scheduleEl = document.getElementById('cal-schedule');
+    const days = getWeekDays(currentWeekStart);
+    const workDays = days.filter(d => WORKING_DAYS.includes(d.getDay()));
+
+    const list = document.createElement('div');
+    list.className = 'cal-schedule-list';
+
+    workDays.forEach(day => {
+        const dayAppts = appointments
+            .filter(a => isSameDay(new Date(a.start_time), day))
+            .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+        const dayEl = document.createElement('div');
+        dayEl.className = 'cal-schedule-day';
+
+        const header = document.createElement('div');
+        header.className = 'cal-schedule-day-header';
+        header.textContent = `${DAY_FULL_NAMES[day.getDay()]}, ${day.getDate()} ${MONTHS[day.getMonth()]} ${day.getFullYear()}`;
+        dayEl.appendChild(header);
+
+        if (dayAppts.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'cal-schedule-empty';
+            empty.textContent = 'Нет записей';
+            dayEl.appendChild(empty);
+        } else {
+            dayAppts.forEach(appt => {
+                const row = document.createElement('div');
+                row.className = 'cal-schedule-row' + (appt.appointment_status === 'completed' ? ' cal-schedule-row--completed' : '');
+                const statusLabel = STATUS_LABELS[appt.appointment_status] || appt.appointment_status;
+                row.innerHTML = `
+                    <span class="cal-schedule-time">${formatTime(appt.start_time)}</span>
+                    <span class="cal-schedule-name">${escHtml(appt.client_name)}</span>
+                    <span class="cal-schedule-service">${escHtml(appt.service || '—')}</span>
+                    <span class="cal-badge cal-badge-${appt.appointment_status}">${escHtml(statusLabel)}</span>
+                `;
+                row.addEventListener('click', () => openEditModal(appt));
+                dayEl.appendChild(row);
+            });
+        }
+
+        list.appendChild(dayEl);
+    });
+
+    scheduleEl.innerHTML = '';
+    scheduleEl.appendChild(list);
 }
 
 // ── Auth ───────────────────────────────────────────────────────────────────

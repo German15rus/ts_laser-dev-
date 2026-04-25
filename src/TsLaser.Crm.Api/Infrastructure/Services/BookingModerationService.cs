@@ -44,6 +44,7 @@ public sealed class BookingModerationService(
                 Address = address,
                 ReferralCustom = referralSource,
                 Status = "active",
+                Gender = MapGender(submission.Gender),
             };
             await clientRepo.CreateAsync(client, cancellationToken);
         }
@@ -73,6 +74,12 @@ public sealed class BookingModerationService(
             if (InputCleaner.IsNotFilled(client.ReferralCustom))
             {
                 client.ReferralCustom = referralSource;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(client.Gender) && !string.IsNullOrWhiteSpace(submission.Gender))
+            {
+                client.Gender = MapGender(submission.Gender);
                 changed = true;
             }
 
@@ -186,6 +193,13 @@ public sealed class BookingModerationService(
 
         throw new ApiException(StatusCodes.Status409Conflict, message);
     }
+
+    private static string? MapGender(string? gender) => gender?.Trim() switch
+    {
+        "Мужской" => "М",
+        "Женский" => "Ж",
+        _ => null
+    };
 
     private static string? NormalizeRejectionReason(string? reason)
     {

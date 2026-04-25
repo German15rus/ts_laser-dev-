@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using TsLaser.Crm.Api.Common;
 using TsLaser.Crm.Api.Contracts;
 using TsLaser.Crm.Api.Domain.Entities;
+using TsLaser.Crm.Api.Domain.Enums;
 using TsLaser.Crm.Api.Infrastructure.Repositories;
 
 namespace TsLaser.Crm.Api.Controllers;
@@ -10,7 +11,10 @@ namespace TsLaser.Crm.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/clients")]
-public sealed class ClientsController(ClientRepository clientRepo, PartnerRepository partnerRepo) : ControllerBase
+public sealed class ClientsController(
+    ClientRepository clientRepo,
+    PartnerRepository partnerRepo,
+    IntakeSubmissionRepository submissionRepo) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<ClientListResponse>>> GetClients(
@@ -109,6 +113,16 @@ public sealed class ClientsController(ClientRepository clientRepo, PartnerReposi
         client.StoppedReason = request.StoppedReason;
 
         await clientRepo.UpdateAsync(client, cancellationToken);
+
+        if (client.Status == "completed")
+        {
+            var submissions = await submissionRepo.GetApprovedByClientIdAsync(clientId, cancellationToken);
+            foreach (var sub in submissions)
+            {
+                sub.Status = IntakeSubmissionStatus.Completed;
+                await submissionRepo.UpdateAsync(sub, cancellationToken);
+            }
+        }
 
         string? partnerName = null;
         if (client.ReferralPartnerId.HasValue)

@@ -1,5 +1,6 @@
 using Google.Cloud.Firestore;
 using TsLaser.Crm.Api.Domain.Entities;
+using TsLaser.Crm.Api.Domain.Enums;
 
 namespace TsLaser.Crm.Api.Infrastructure.Repositories;
 
@@ -45,10 +46,34 @@ public sealed class AppointmentRepository(FirestoreDb db, FirestoreCounterReposi
 
     public async Task<HashSet<int>> GetAllSubmissionIdsAsync(CancellationToken ct = default)
     {
-        var snap = await db.Collection(Col).Select("intake_submission_id").GetSnapshotAsync(ct);
+        var snap = await db.Collection(Col).GetSnapshotAsync(ct);
         return snap.Documents
             .Select(d => FirestoreHelper.ToInt(d.ToDictionary().GetValueOrDefault("intake_submission_id")))
+            .Where(id => id != 0)
             .ToHashSet();
+    }
+
+    public async Task<HashSet<int>> GetCompletedSubmissionIdsAsync(CancellationToken ct = default)
+    {
+        var snap = await db.Collection(Col)
+            .WhereEqualTo("appointment_status", AppointmentStatus.Completed)
+            .GetSnapshotAsync(ct);
+        return snap.Documents
+            .Select(d => FirestoreHelper.ToInt(d.ToDictionary().GetValueOrDefault("intake_submission_id")))
+            .Where(id => id != 0)
+            .ToHashSet();
+    }
+
+    public async Task<List<Appointment>> GetWaitingStartedBeforeAsync(DateTime utcNow, CancellationToken ct = default)
+    {
+        var snap = await db.Collection(Col)
+            .WhereEqualTo("appointment_status", "waiting")
+            .GetSnapshotAsync(ct);
+
+        return snap.Documents
+            .Select(ToEntity)
+            .Where(a => a.StartTime <= utcNow)
+            .ToList();
     }
 
     public async Task<bool> ExistsBySubmissionIdAsync(int submissionId, CancellationToken ct = default)

@@ -36,6 +36,24 @@ public sealed class IntakeSubmissionRepository(FirestoreDb db, FirestoreCounterR
             .ToList();
     }
 
+    public async Task<List<IntakeSubmission>> GetApprovedByClientIdAsync(int clientId, CancellationToken ct = default)
+    {
+        var snap = await db.Collection(Col)
+            .WhereEqualTo("client_id", (long)clientId)
+            .WhereEqualTo("status", "approved")
+            .GetSnapshotAsync(ct);
+        return snap.Documents.Where(HasIntegerId).Select(ToEntity).ToList();
+    }
+
+    public async Task<HashSet<int>> GetIdsByStatusAsync(string status, CancellationToken ct = default)
+    {
+        var snap = await db.Collection(Col)
+            .WhereEqualTo("status", status)
+            .Select("__name__")
+            .GetSnapshotAsync(ct);
+        return snap.Documents.Where(HasIntegerId).Select(d => int.Parse(d.Id)).ToHashSet();
+    }
+
     public async Task<List<int>> GetAllIdsAsync(CancellationToken ct = default)
     {
         var snap = await db.Collection(Col).Select("__name__").GetSnapshotAsync(ct);

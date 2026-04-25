@@ -152,6 +152,7 @@ builder.Services.AddScoped<FirebaseMigrationService>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<TemplateService>();
 builder.Services.AddSingleton<ExportService>();
+builder.Services.AddHostedService<AppointmentStatusUpdaterService>();
 
 builder.Services.AddOpenApi();
 

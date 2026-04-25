@@ -18,6 +18,8 @@ public sealed class CalendarController(
     private static readonly int[] WorkingDays = [2, 4, 6]; // Tue, Thu, Sat
     private const int WorkDayStartHour = 10;
     private const int WorkDayEndHour = 20;
+    // Moscow is UTC+3 with no DST since 2014
+    private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
     [HttpGet("appointments")]
     public async Task<ActionResult<List<AppointmentResponse>>> GetAppointments(
@@ -37,7 +39,11 @@ public sealed class CalendarController(
         CancellationToken cancellationToken = default)
     {
         var scheduledIds = await appointmentRepo.GetAllSubmissionIdsAsync(cancellationToken);
-        var clients = await submissionRepo.GetApprovedNotScheduledAsync(scheduledIds, cancellationToken);
+        var completedAppointmentIds = await appointmentRepo.GetCompletedSubmissionIdsAsync(cancellationToken);
+        var completedSubmissionIds = await submissionRepo.GetIdsByStatusAsync(IntakeSubmissionStatus.Completed, cancellationToken);
+        var excludedIds = scheduledIds.Union(completedAppointmentIds).Union(completedSubmissionIds).ToHashSet();
+
+        var clients = await submissionRepo.GetApprovedNotScheduledAsync(excludedIds, cancellationToken);
 
         return Ok(clients.Select(x => new AvailableClientResponse
         {
@@ -59,6 +65,11 @@ public sealed class CalendarController(
         if (submission is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Анкета не найдена");
+        }
+
+        if (submission.Status == IntakeSubmissionStatus.Completed)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, "Нельзя записать клиента с завершённой анкетой");
         }
 
         if (submission.Status != IntakeSubmissionStatus.Approved)
@@ -101,6 +112,11 @@ public sealed class CalendarController(
         if (appointment is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Запись не найдена");
+        }
+
+        if (appointment.AppointmentStatus == AppointmentStatus.Completed)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, "Завершённую запись нельзя изменить");
         }
 
         var newStartTime = request.StartTime.HasValue ? request.StartTime.Value : appointment.StartTime;
@@ -153,26 +169,32 @@ public sealed class CalendarController(
             throw new ApiException(StatusCodes.Status404NotFound, "Запись не найдена");
         }
 
+        if (appointment.AppointmentStatus == AppointmentStatus.Completed)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, "Завершённые записи нельзя удалить");
+        }
+
         await appointmentRepo.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
 
     private static void ValidateWorkSchedule(DateTime startTime, int durationMinutes)
     {
-        var localTime = startTime.Kind == DateTimeKind.Utc ? startTime.ToLocalTime() : startTime;
+        var utc = startTime.Kind == DateTimeKind.Utc ? startTime : startTime.ToUniversalTime();
+        var moscowTime = utc + MoscowOffset;
 
-        if (!WorkingDays.Contains((int)localTime.DayOfWeek))
+        if (!WorkingDays.Contains((int)moscowTime.DayOfWeek))
         {
             throw new ApiException(StatusCodes.Status400BadRequest, "Рабочие дни: Вторник, Четверг, Суббота");
         }
 
-        if (localTime.Hour < WorkDayStartHour)
+        if (moscowTime.Hour < WorkDayStartHour)
         {
             throw new ApiException(StatusCodes.Status400BadRequest, $"Рабочее время с {WorkDayStartHour}:00 до {WorkDayEndHour}:00");
         }
 
-        var endTime = localTime.AddMinutes(durationMinutes);
-        var workDayEnd = localTime.Date.AddHours(WorkDayEndHour);
+        var endTime = moscowTime.AddMinutes(durationMinutes);
+        var workDayEnd = moscowTime.Date.AddHours(WorkDayEndHour);
 
         if (endTime > workDayEnd)
         {
@@ -190,8 +212,8 @@ public sealed class CalendarController(
     {
         Id = a.Id,
         IntakeSubmissionId = a.IntakeSubmissionId,
-        ClientName = a.IntakeSubmission.FullName,
-        Service = a.IntakeSubmission.TattooType,
+        ClientName = a.IntakeSubmission?.FullName ?? "(клиент удалён)",
+        Service = a.IntakeSubmission?.TattooType,
         MasterName = a.MasterName,
         StartTime = a.StartTime,
         DurationMinutes = a.DurationMinutes,
